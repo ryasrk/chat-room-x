@@ -389,17 +389,59 @@ function renderInlineMarkdown(text, ctx) {
 function renderBlockElements(text, ctx) {
   const lines = text.split('\n');
   const result = [];
-  let inList = false;
-  let listType = null;
-  let listItems = [];
 
-  function flushList() {
-    if (!inList) return;
-    const tag = listType === 'ol' ? 'ol' : 'ul';
-    result.push(`<${tag}>${listItems.join('')}</${tag}>`);
-    listItems = [];
-    inList = false;
-    listType = null;
+  // ── Nested list stack ──────────────────────────────────────
+  // Each entry: { type: 'ol'|'ul', indent: number }
+  const listStack = [];
+
+  function getIndent(raw) {
+    const match = raw.match(/^(\s*)/);
+    return match ? match[1].length : 0;
+  }
+
+  function currentListType() {
+    return listStack.length > 0 ? listStack[listStack.length - 1].type : null;
+  }
+
+  function currentIndent() {
+    return listStack.length > 0 ? listStack[listStack.length - 1].indent : -1;
+  }
+
+  function openList(type, indent) {
+    const tag = type === 'ol' ? 'ol' : 'ul';
+    result.push(`<${tag}>`);
+    listStack.push({ type, indent });
+  }
+
+  function closeList() {
+    if (listStack.length === 0) return;
+    const { type } = listStack.pop();
+    const tag = type === 'ol' ? 'ol' : 'ul';
+    result.push(`</${tag}>`);
+  }
+
+  function closeAllLists() {
+    while (listStack.length > 0) closeList();
+  }
+
+  /**
+   * Close lists back to a given indent level.
+   * If the new item is at the same indent but a different type,
+   * close the current list so a new one can be opened.
+   */
+  function closeListsToIndent(indent, newType) {
+    while (listStack.length > 0) {
+      const top = listStack[listStack.length - 1];
+      if (top.indent > indent) {
+        closeList();
+      } else if (top.indent === indent && top.type !== newType) {
+        // Same indent, different list type → close and reopen
+        closeList();
+        break;
+      } else {
+        break;
+      }
+    }
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -408,7 +450,7 @@ function renderBlockElements(text, ctx) {
     // Headings
     const headingMatch = line.match(/^(#{2,4})\s+(.+)$/);
     if (headingMatch) {
-      flushList();
+      closeAllLists();
       const level = headingMatch[1].length;
       result.push(`<h${level}>${renderInlineMarkdown(headingMatch[2], ctx)}</h${level}>`);
       continue;
@@ -416,16 +458,15 @@ function renderBlockElements(text, ctx) {
 
     // Horizontal rule
     if (/^-{3,}$/.test(line.trim()) || /^\*{3,}$/.test(line.trim()) || /^_{3,}$/.test(line.trim())) {
-      flushList();
+      closeAllLists();
       result.push('<hr>');
       continue;
     }
 
     // Blockquote
     if (line.startsWith('&gt; ') || line.startsWith('&gt;')) {
-      flushList();
+      closeAllLists();
       const quoteContent = line.replace(/^&gt;\s?/, '');
-      // Collect consecutive blockquote lines
       let quoteBlock = quoteContent;
       while (i + 1 < lines.length && (lines[i + 1].startsWith('&gt; ') || lines[i + 1].startsWith('&gt;'))) {
         i++;
@@ -435,32 +476,34 @@ function renderBlockElements(text, ctx) {
       continue;
     }
 
-    // Unordered list
+    // Unordered list item
     const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
     if (ulMatch) {
-      if (!inList || listType !== 'ul') {
-        flushList();
-        inList = true;
-        listType = 'ul';
+      const indent = getIndent(line);
+      closeListsToIndent(indent, 'ul');
+
+      if (listStack.length === 0 || currentIndent() < indent) {
+        openList('ul', indent);
       }
-      listItems.push(`<li>${renderInlineMarkdown(ulMatch[2], ctx)}</li>`);
+      result.push(`<li>${renderInlineMarkdown(ulMatch[2], ctx)}</li>`);
       continue;
     }
 
-    // Ordered list
+    // Ordered list item
     const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
     if (olMatch) {
-      if (!inList || listType !== 'ol') {
-        flushList();
-        inList = true;
-        listType = 'ol';
+      const indent = getIndent(line);
+      closeListsToIndent(indent, 'ol');
+
+      if (listStack.length === 0 || currentIndent() < indent) {
+        openList('ol', indent);
       }
-      listItems.push(`<li>${renderInlineMarkdown(olMatch[2], ctx)}</li>`);
+      result.push(`<li>${renderInlineMarkdown(olMatch[2], ctx)}</li>`);
       continue;
     }
 
-    // Regular line
-    flushList();
+    // Regular line — close all open lists first
+    closeAllLists();
     if (line.trim() === '') {
       result.push('');
     } else {
@@ -468,7 +511,7 @@ function renderBlockElements(text, ctx) {
     }
   }
 
-  flushList();
+  closeAllLists();
   return result.join('\n');
 }
 
