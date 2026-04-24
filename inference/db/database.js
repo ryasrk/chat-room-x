@@ -65,7 +65,8 @@ if (agentColumns.length > 0 && !agentColumns.some((c) => c.name === 'router_conf
 
 // Backfill: set all agents with empty router_config to use cloud xa router
 // This ensures existing rooms benefit from the xa/xb dual-model architecture
-{
+// Only run if the table already exists (fresh DB will be created by schema.sql below)
+if (agentColumns.length > 0) {
   const routerModel = process.env.ENOWXAI_ROUTER_MODEL || 'gemini-2.5-flash';
   const defaultRouterConfig = JSON.stringify({
     provider: 'enowxai',
