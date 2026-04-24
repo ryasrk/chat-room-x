@@ -4,7 +4,7 @@
 
 import {
   listRooms, createRoom, joinRoom, getRoom, leaveRoomApi, deleteRoom,
-  getProjectAgentRoomDetails, sendAgentRoomMessage, sendRoomMessage, getAccessToken,
+  getProjectAgentRoomDetails, sendAgentRoomMessage, cancelAgentRoom, sendRoomMessage, getAccessToken,
 } from './authClient.js';
 import { isAuthenticated, getCurrentUser } from './authClient.js';
 import { showToast } from './utils.js';
@@ -111,6 +111,9 @@ export function createRoomsView() {
               <input type="text" id="room-input" placeholder="Type a message..." autocomplete="off" aria-label="Message input" aria-autocomplete="list" aria-controls="room-mention-menu" />
               <button id="room-send-btn" class="send-btn" title="Send" aria-label="Send message">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M4 7l4-4 4 4"/></svg>
+              </button>
+              <button id="room-stop-btn" class="send-btn stop-btn" title="Stop AI" aria-label="Stop AI agent" hidden>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>
               </button>
             </div>
             <div class="room-composer-hint" id="room-composer-hint">Press @ to mention an agent and delegate a task.</div>
@@ -558,6 +561,7 @@ export function initRoomsUI() {
   const leaveBtn = rs.panel.querySelector('#room-leave-btn');
   const roomInput = rs.panel.querySelector('#room-input');
   const roomSendBtn = rs.panel.querySelector('#room-send-btn');
+  const roomStopBtn = rs.panel.querySelector('#room-stop-btn');
   const roomAiBtn = rs.panel.querySelector('#room-ai-btn');
   const roomAiBackBtn = rs.panel.querySelector('#room-ai-back-btn');
   const roomAiAddBtn = rs.panel.querySelector('#room-ai-add-btn');
@@ -873,6 +877,20 @@ export function initRoomsUI() {
   };
 
   roomSendBtn.addEventListener('click', doSend);
+
+  // Stop button — cancels active AI agent work
+  roomStopBtn.addEventListener('click', async () => {
+    if (!rs.currentAgentRoomId) return;
+    roomStopBtn.disabled = true;
+    try {
+      await cancelAgentRoom(rs.currentAgentRoomId);
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      roomStopBtn.disabled = false;
+    }
+  });
+
   roomInput.addEventListener('input', updateMentionMenu);
   roomInput.addEventListener('blur', () => {
     setTimeout(() => hideMentionMenu(), 150);

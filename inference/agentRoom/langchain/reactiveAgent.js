@@ -659,6 +659,7 @@ export async function runReactiveAgentTurn({
   conversationHistory,
   postMessage,
   onToolUse,
+  signal,
 }) {
   // Build tools
   const workspaceTools = createWorkspaceTools(roomContext.workspacePath, {
@@ -839,6 +840,18 @@ export async function runReactiveAgentTurn({
 
   try {
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
+      // Check if the work has been cancelled
+      if (signal?.aborted) {
+        return {
+          message: '⏹ Work was stopped by the user.',
+          handoffs: [],
+          toolResults,
+          privateMemory: '',
+          confidence: 0,
+          usage: usageAccumulator,
+        };
+      }
+
       let result;
       try {
         result = await (nativeToolCallingEnabled ? nativeModel : baseModel).invoke(messages);
@@ -917,6 +930,18 @@ export async function runReactiveAgentTurn({
 
       const currentToolResults = [];
       for (const toolCall of toolCalls.slice(0, remainingBudget)) {
+        // Check abort before each tool execution
+        if (signal?.aborted) {
+          return {
+            message: '⏹ Work was stopped by the user.',
+            handoffs: [],
+            toolResults,
+            privateMemory: '',
+            confidence: 0,
+            usage: usageAccumulator,
+          };
+        }
+
         const tool = allTools.find((t) => t.name === toolCall.tool);
         const nativeToolCall = normalizedNativeToolCalls.find((candidate) => candidate.id === toolCall.id);
         if (!tool) {

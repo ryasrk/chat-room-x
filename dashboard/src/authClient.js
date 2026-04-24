@@ -375,6 +375,10 @@ export async function sendAgentRoomMessage(roomId, content) {
   return apiPost(`/api/agent-rooms/${roomId}/message`, { content }, true);
 }
 
+export async function cancelAgentRoom(roomId) {
+  return apiPost(`/api/agent-rooms/${roomId}/cancel`, {}, true);
+}
+
 export async function submitReworkDecision(roomId, decision) {
   return apiPost(`/api/agent-rooms/${roomId}/rework-decision`, { decision }, true);
 }

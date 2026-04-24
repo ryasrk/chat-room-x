@@ -152,6 +152,12 @@ export function connectAgentRoomSocket() {
       return;
     }
 
+    if (payload.type === 'agent_room:cancelled') {
+      clearXbProgress();
+      clearAllTypingIndicators();
+      return;
+    }
+
     if (payload.type === 'agent_room:token_usage') {
       if (payload.agent_name && payload.usage) {
         addRealtimeTokenUsage(payload.agent_name, payload.usage);

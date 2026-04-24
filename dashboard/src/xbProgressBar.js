@@ -53,11 +53,27 @@ export function handleXbProgress(payload) {
 export function clearXbProgress() {
   activeTasks.clear();
   renderXbProgressBar();
+  updateStopButtonVisibility();
+}
+
+/**
+ * Returns true if any xb tasks are currently active (agents working).
+ */
+export function hasActiveTasks() {
+  return activeTasks.size > 0;
+}
+
+function updateStopButtonVisibility() {
+  const stopBtn = rs.panel?.querySelector('#room-stop-btn');
+  if (!stopBtn) return;
+  stopBtn.hidden = activeTasks.size === 0;
 }
 
 function renderXbProgressBar() {
   const container = rs.panel?.querySelector('#xb-progress-bar');
   if (!container) return;
+
+  updateStopButtonVisibility();
 
   if (activeTasks.size === 0) {
     container.hidden = true;

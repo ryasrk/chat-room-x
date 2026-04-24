@@ -610,6 +610,20 @@ export async function handleAgentRoomRoute(path, url, req, res) {
     return true;
   }
 
+  const cancelMatch = path.match(/^\/api\/agent-rooms\/([^/]+)\/cancel$/);
+  if (cancelMatch && req.method === 'POST') {
+    const room = getAccessibleRoomOrReject(cancelMatch[1], userId, res);
+    if (!room) return true;
+
+    try {
+      agentRoomOrchestrator.cancelRoom(room.id);
+      sendJson(res, 200, { cancelled: true });
+    } catch (error) {
+      sendJson(res, 500, { error: error.message || 'Failed to cancel agent work' });
+    }
+    return true;
+  }
+
   const messagesMatch = path.match(/^\/api\/agent-rooms\/([^/]+)\/messages$/);
   if (messagesMatch && req.method === 'GET') {
     const room = getAccessibleRoomOrReject(messagesMatch[1], userId, res);

@@ -83,6 +83,18 @@ export function completeXbTask(roomId, agentName, resultMessage = '') {
 }
 
 /**
+ * Mark an xb task as cancelled by the user.
+ */
+export function cancelXbTask(roomId, agentName) {
+  const room = getKey(roomId);
+  const progress = room.get(agentName);
+  if (!progress) return;
+  progress.status = 'done';
+  progress.result = 'Cancelled by user';
+  progress.updatedAt = Date.now();
+}
+
+/**
  * Mark an xb task as failed.
  */
 export function failXbTask(roomId, agentName, errorMessage = 'Task failed') {

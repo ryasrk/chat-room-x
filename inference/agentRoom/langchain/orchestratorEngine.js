@@ -18,7 +18,7 @@ import {
 import { listFiles } from '../fileTools.js';
 import { broadcastAgentRoomEvent } from '../wsBridge.js';
 import { runReactiveAgentTurn, shouldAgentRespond } from './reactiveAgent.js';
-import { startXbTask, updateXbStep, recordXbToolCall, completeXbTask, failXbTask, cleanupXbTasks } from '../progressStore.js';
+import { startXbTask, updateXbStep, recordXbToolCall, completeXbTask, failXbTask, cancelXbTask, getActiveXbTasks, cleanupXbTasks } from '../progressStore.js';
 
 const DEFAULT_AUTONOMY_LEVEL = 2;
 const MAX_VISIBLE_HISTORY = 40;
@@ -303,6 +303,8 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
     this.roomQueues = new Map();
     /** @type {Map<string, {resolve: Function, reject: Function}>} roomId → pending decision */
     this.pendingReworkDecisions = new Map();
+    /** @type {Map<string, AbortController>} roomId → AbortController for cancelling active work */
+    this.roomAbortControllers = new Map();
 
     // Periodic cleanup of old xb progress entries (every 5 minutes)
     this._cleanupInterval = setInterval(() => cleanupXbTasks(), 5 * 60 * 1000);
@@ -320,6 +322,38 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
       this.pendingReworkDecisions.delete(roomId);
       pending.resolve(decision);
     }
+  }
+
+  /**
+   * Cancel all active work in a room. Aborts the current AbortController
+   * and cleans up progress tracking for all active agents.
+   * @param {string} roomId
+   */
+  cancelRoom(roomId) {
+    const controller = this.roomAbortControllers.get(roomId);
+    if (controller) {
+      controller.abort();
+      this.roomAbortControllers.delete(roomId);
+    }
+
+    // Mark all active xb tasks as cancelled
+    const activeTasks = getActiveXbTasks(roomId);
+    for (const { agentName } of activeTasks) {
+      cancelXbTask(roomId, agentName);
+      updateAgentRoomAgentStatus(roomId, agentName, 'idle');
+      this.emitRoomEvent(roomId, 'agent_room:agent_status', {
+        agent_name: agentName,
+        status: 'idle',
+      });
+    }
+
+    // Emit cancelled event to dashboard
+    this.emitRoomEvent(roomId, 'agent_room:cancelled', {
+      timestamp: nowUnix(),
+    });
+
+    // Post a system message so the cancellation is visible in chat
+    this.postAgentMessage(roomId, 'system', '⏹ Agent work was stopped by the user.', 'system');
   }
 
   /**
@@ -423,6 +457,10 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
     let reworkCycles = 0;
 
     while (triggerQueue.length > 0 && cycles < roomConfig.maxCycles) {
+      // Check if room work has been cancelled
+      const roomController = this.roomAbortControllers.get(roomId);
+      if (roomController?.signal.aborted) break;
+
       // ── Parallel Wave: batch independent triggers targeting different agents ──
       const wave = [];
       const waveAgentNames = new Set();
@@ -698,6 +736,10 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
   async _runXbBackground(roomId, agent, roomContext, input, conversationHistory) {
     const bgPostedMessages = [];
 
+    // Create an AbortController for this room's work so it can be cancelled
+    const abortController = new AbortController();
+    this.roomAbortControllers.set(roomId, abortController);
+
     try {
       this.emitRoomEvent(roomId, 'agent_room:xb_progress', {
         agent_name: agent.name,
@@ -711,6 +753,7 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
         roomContext,
         input,
         conversationHistory,
+        signal: abortController.signal,
         postMessage: async (senderName, content, eventType = 'message') => {
           const message = this.postAgentMessage(roomId, senderName, content, eventType);
           if (message) bgPostedMessages.push(message);
@@ -847,6 +890,24 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
         console.log(`[${agent.name}] xb produced handoffs but agent signaled completion — skipping re-injection to prevent loop`);
       }
     } catch (error) {
+      // If the work was cancelled via AbortController, handle gracefully
+      if (abortController.signal.aborted) {
+        cancelXbTask(roomId, agent.name);
+        saveAgentRoomLog(roomId, agent.name, 'info', 'Agent work cancelled by user');
+        updateAgentRoomAgentStatus(roomId, agent.name, 'idle');
+        this.emitRoomEvent(roomId, 'agent_room:agent_status', {
+          agent_name: agent.name,
+          status: 'idle',
+        });
+        this.emitRoomEvent(roomId, 'agent_room:xb_progress', {
+          agent_name: agent.name,
+          step: 'Cancelled',
+          status: 'failed',
+          timestamp: nowUnix(),
+        });
+        return;
+      }
+
       failXbTask(roomId, agent.name, error.message);
       saveAgentRoomLog(roomId, agent.name, 'error', 'xb background execution failed');
 
@@ -866,6 +927,11 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
         agent_name: agent.name,
         message: 'xb background execution failed',
       });
+    } finally {
+      // Clean up the AbortController for this room
+      if (this.roomAbortControllers.get(roomId) === abortController) {
+        this.roomAbortControllers.delete(roomId);
+      }
     }
   }
 }
