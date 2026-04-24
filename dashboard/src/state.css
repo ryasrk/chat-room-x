@@ -1,0 +1,25 @@
+/* state.css - UI Status and visibility */
+.hidden { display: none !important; }
+.active { display: flex !important; }
+
+/* Room mode state */
+.room-mode-agent .mode-btn { opacity: 0.5; }
+.room-mode-agent .mode-btn.agent { opacity: 1; border-color: var(--border-light); }
+
+/* Member status colors */
+.status-available { color: #10b981; }
+.status-busy { color: #f59e0b; }
+.status-offline { color: #6b7280; }
+
+.status-ring {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-right: 6px;
+}
+.status-ring.status-connected { background-color: #10b981; box-shadow: 0 0 6px #10b981; }
+.status-ring.status-reconnecting { background-color: #f59e0b; animation: pulse 1s infinite; }
+.status-ring.status-offline { background-color: #ef4444; }
+.status-ring.status-idle { background-color: #6b7280; }
+
+/* Modals */
+.modal.visible { display: flex; opacity: 1; pointer-events: auto; }
+.toast.toast-show { opacity: 1; transform: translateX(-50%) translateY(0); }

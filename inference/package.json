@@ -1,0 +1,20 @@
+{
+  "name": "chat-room-x",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun manager.js enowxai",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@langchain/anthropic": "^1.3.26",
+    "@langchain/core": "^1.1.40",
+    "@langchain/openai": "^1.4.4",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@msgpack/msgpack": "^3.1.3",
+    "jsonwebtoken": "^9.0.3",
+    "redis": "^4.7.1",
+    "ws": "^8.20.0",
+    "zod": "^4.3.6"
+  }
+}

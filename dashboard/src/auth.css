@@ -1,0 +1,299 @@
+/* ── User Menu ──────────────────────────────────── */
+.user-menu-container { position: relative; }
+.user-menu-btn {
+  background: none; border: none; cursor: pointer; padding: 2px;
+}
+.user-avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--bg-tertiary); border: 2px solid var(--border);
+  color: var(--text-secondary); font-size: 14px; font-weight: 700;
+  transition: border-color .2s, background .2s;
+  overflow: hidden; position: relative;
+}
+.user-avatar.authenticated {
+  background: var(--accent); color: #fff; border-color: var(--accent-hover);
+}
+.user-avatar.has-avatar {
+  background: transparent; border-color: var(--accent);
+}
+.user-dropdown {
+  position: absolute; top: 40px; right: 0;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4); z-index: 1000;
+  padding: 8px 0;
+}
+.user-dropdown-header { padding: 10px 14px; }
+.user-dropdown-name { display: block; font-weight: 600; font-size: 14px; color: var(--text-primary); }
+.user-dropdown-username { font-size: 12px; color: var(--text-secondary); }
+.user-dropdown hr { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+.user-dropdown-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 8px 14px; text-align: left;
+  background: none; border: none; color: var(--text-primary);
+  font-size: 13px; cursor: pointer; transition: background .15s;
+}
+.user-dropdown-item svg { flex-shrink: 0; opacity: .7; }
+.user-dropdown-item:hover { background: var(--bg-tertiary); }
+.user-dropdown-item:hover svg { opacity: 1; }
+.user-dropdown-logout { color: var(--danger); }
+.user-dropdown-logout svg { stroke: var(--danger); }
+
+/* ── Profile Modal ──────────────────────────────── */
+.profile-modal {
+  padding: 28px 32px;
+  width: 420px; max-width: 100%;
+}
+.profile-avatar-section {
+  display: flex; flex-direction: column; align-items: center;
+  margin-bottom: 24px; gap: 8px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.profile-avatar-large {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #3fb950);
+  color: #fff; font-size: 28px; font-weight: 800;
+  box-shadow: 0 6px 20px rgba(88,166,255,.2);
+}
+.profile-username {
+  font-size: 14px; color: var(--text-secondary); font-weight: 500;
+}
+.profile-avatar-upload {
+  position: relative; cursor: pointer;
+  border-radius: 50%; overflow: hidden;
+  transition: transform .15s;
+}
+.profile-avatar-upload:hover { transform: scale(1.05); }
+.profile-avatar-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.5); color: #fff;
+  opacity: 0; transition: opacity .2s;
+  border-radius: 50%;
+}
+.profile-avatar-upload:hover .profile-avatar-overlay { opacity: 1; }
+.profile-avatar-hint {
+  font-size: 11px; color: var(--text-muted); margin-top: 2px;
+}
+.profile-password-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.profile-password-toggle {
+  padding: 12px 16px; cursor: pointer; font-size: 13px;
+  font-weight: 600; color: var(--text-secondary);
+  list-style: none;
+  transition: color .15s;
+}
+.profile-password-toggle:hover { color: var(--text-primary); }
+.profile-password-toggle::-webkit-details-marker { display: none; }
+.profile-password-toggle::before {
+  content: '▸ '; transition: transform .2s;
+}
+details[open] > .profile-password-toggle::before { content: '▾ '; }
+.profile-password-section[open] {
+  padding-bottom: 16px;
+}
+.profile-password-section .auth-form {
+  padding: 0 16px;
+}
+
+/* ══════════════════════════════════════════════════
+   ROOMS UI
+   ══════════════════════════════════════════════════ */
+
+/* Rooms page container */
+.rooms-page {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: auto;
+}
+.rooms-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0; flex-wrap: wrap; gap: 12px;
+}
+.rooms-header h2 {
+  font-size: 20px; font-weight: 700; margin: 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.rooms-actions { display: flex; gap: 8px; }
+
+.rooms-sidebar-panel,
+.rooms-workspace-panel {
+  min-width: 0;
+}
+
+.rooms-sidebar-panel {
+  display: grid;
+  gap: 14px;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
+  overflow: visible;
+}
+
+.rooms-sidebar-header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.rooms-sidebar-header p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.rooms-list {
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 0;
+}
+.rooms-empty {
+  text-align: center; padding: 48px 24px;
+  color: var(--text-secondary); font-size: 14px; line-height: 1.6;
+}
+.rooms-empty::before {
+  content: ''; display: block; width: 40px; height: 40px; margin: 0 auto 12px;
+  background: var(--text-secondary); opacity: .3;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fff' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='3' width='12' height='10' rx='2'/%3E%3Cpath d='M6 3V1M10 3V1'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fff' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='3' width='12' height='10' rx='2'/%3E%3Cpath d='M6 3V1M10 3V1'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* Room cards */
+.room-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px; border-radius: 18px;
+  background: color-mix(in srgb, var(--bg-primary) 55%, var(--bg-secondary)); border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color .2s, background .15s, box-shadow .2s, transform .1s;
+}
+.room-card:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--bg-secondary) 70%, var(--accent) 8%);
+  box-shadow: 0 10px 24px rgba(88,166,255,.10);
+  transform: translateY(-1px);
+}
+.room-card.is-active {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--bg-secondary) 68%, var(--accent) 10%);
+  box-shadow: 0 16px 32px rgba(88,166,255,.12);
+}
+.room-card:active { transform: translateY(0); }
+.room-card-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 10px;
+  background: rgba(88,166,255,.1); font-size: 20px;
+  flex-shrink: 0;
+}
+.room-card-info { flex: 1; min-width: 0; }
+.room-card-name {
+  font-weight: 600; font-size: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.room-card-meta {
+  font-size: 12px; color: var(--text-secondary); margin-top: 3px;
+}
+.room-card-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.room-card-category {
+  font-weight: 600; color: var(--accent); font-size: 11px;
+  text-transform: uppercase; letter-spacing: .3px;
+}
+.room-card-arrow {
+  color: var(--text-muted); font-size: 16px; flex-shrink: 0;
+  transition: transform .15s;
+}
+.room-card:hover .room-card-arrow { transform: translateX(2px); }
+
+/* ── Room Card 3-Dot Menu ─────────────────────────── */
+.room-card-actions {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.room-card-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.room-card-menu-btn:hover {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-secondary));
+  color: var(--accent);
+}
+
+.room-card-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  min-width: 160px;
+  margin-top: 4px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.room-card-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+  text-align: left;
+}
+
+.room-card-dropdown-item:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-tertiary));
+}
+
+.room-card-dropdown-danger {
+  color: #ef4444;
+}
+
+.room-card-dropdown-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+

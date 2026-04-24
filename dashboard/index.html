@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- CSP injected at build time by Vite (see vite.config.js cspPlugin) -->
+  <title>Chat Room X</title>
+  <!-- Preconnect to CDN domains — speeds up resource loading by ~100-200ms -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+  <!--
+    CDN libraries (highlight.js, KaTeX, Mermaid) are lazy-loaded by
+    src/lazyLibs.js on first user interaction — saves ~200-400ms on
+    initial page load by deferring ~500KB of JS parsing.
+  -->
+  <!-- PWA -->
+  <link rel="icon" type="image/svg+xml" href="/icon-192.svg">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <a href="#chat-container" class="sr-only skip-link">Skip to chat</a>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar" aria-label="Chat history">
+      <div class="sidebar-header">
+        <div class="sidebar-actions">
+          <button id="new-chat-btn" class="sidebar-btn sidebar-btn--primary" title="New chat (Ctrl+N)">
+            <span class="sidebar-btn-icon">+</span> New Chat
+          </button>
+          <button id="new-folder-btn" class="sidebar-btn sidebar-btn--secondary" title="New project folder">
+            <span class="sidebar-btn-icon">📁</span>
+          </button>
+        </div>
+        <div class="sidebar-search">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-conversations" placeholder="Search conversations..." aria-label="Search conversations" />
+        </div>
+      </div>
+      <div class="conversation-list" id="conversation-list"></div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
+
+    <!-- Main content -->
+    <div class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button id="sidebar-toggle" title="Toggle sidebar">☰</button>
+          <h1>Chat Room X</h1>
+          <span class="badge" id="mode-badge">enowxai</span>
+        </div>
+        <nav class="header-nav" aria-label="Main navigation">
+          <button class="nav-tab active" data-view="chat" title="Chat">💬 Chat</button>
+          <button class="nav-tab" data-view="rooms" title="Project Rooms">🏠 Rooms</button>
+          <button class="nav-tab" data-view="playground" title="Prompt Playground">🧪 Playground</button>
+        </nav>
+        <div class="header-right">
+          <div class="context-bar" id="context-bar" title="Context usage" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Context usage">
+            <div class="context-fill" id="context-fill"></div>
+            <span class="context-label" id="context-label">0%</span>
+          </div>
+          <select id="mode-select">
+            <option value="enowxai" selected>EnowxAI</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+          </select>
+          <button id="theme-toggle" class="header-btn" type="button" title="Toggle theme" aria-label="Toggle theme">🌙</button>
+          <button id="settings-btn" title="Settings">⚙</button>
+          <button id="shortcuts-btn" title="Keyboard shortcuts">?</button>
+        </div>
+      </header>
+
+      <!-- Chat View -->
+      <div class="view-panel" id="view-chat">
+        <!-- Chat Area -->
+        <main class="chat-container" id="chat-container">
+          <div class="msg-search-bar" id="msg-search-bar" hidden>
+            <input type="text" id="msg-search-input" placeholder="Search in conversation..." />
+            <span id="msg-search-count" class="msg-search-count"></span>
+            <button id="msg-search-prev" class="msg-search-nav" title="Previous">↑</button>
+            <button id="msg-search-next" class="msg-search-nav" title="Next">↓</button>
+            <button id="msg-search-close" class="msg-search-close" title="Close">×</button>
+          </div>
+          <div class="welcome" id="welcome">
+            <div class="welcome-icon">TX</div>
+            <h2>Cloud AI • Multi-Provider</h2>
+            <p>Cloud-powered inference with Agent Room (XA router + XB deep work)</p>
+            <div class="stats-bar">
+              <span class="stat">EnowxAI Gateway</span>
+              <span class="stat">GPT-5.4 / Gemini</span>
+              <span class="stat">Zero GPU needed</span>
+            </div>
+            <div class="suggestions" id="suggestions">
+              <button class="suggestion-chip" data-prompt="Explain quantum computing in simple terms">Explain quantum computing</button>
+              <button class="suggestion-chip" data-prompt="Write a Python function to sort a list using quicksort">Write quicksort in Python</button>
+              <button class="suggestion-chip" data-prompt="What are the key differences between REST and GraphQL?">REST vs GraphQL</button>
+              <button class="suggestion-chip" data-prompt="Help me debug: why would a recursive function cause a stack overflow?">Debug stack overflow</button>
+            </div>
+          </div>
+          <div class="messages" id="messages"></div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="input-area">
+          <div class="input-wrapper">
+            <input type="file" id="file-upload-doc" hidden accept=".txt,.md,.json,.csv,.pdf,.py,.js,.ts" />
+            <input type="file" id="file-upload-img" hidden accept="image/*" />
+            <div id="input-preview" class="input-preview" hidden></div>
+            <textarea
+              id="user-input"
+              placeholder="Send a message… (Shift+Enter for new line)"
+              rows="1"
+              autofocus
+              aria-label="Message input"
+            ></textarea>
+            <div class="input-toolbar">
+              <div class="composer-tools">
+                <div class="plus-menu-container">
+                  <button id="plus-btn" class="input-icon-btn" type="button" title="Tools" aria-label="Open tools" aria-haspopup="menu" aria-expanded="false" aria-controls="plus-menu">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 1v10M1 6h10"/></svg>
+                  </button>
+                  <div class="plus-menu" id="plus-menu" role="menu" hidden>
+                    <button class="plus-menu-item" type="button" role="menuitem" data-action="upload-doc">Upload Document</button>
+                    <button class="plus-menu-item" type="button" role="menuitem" data-action="upload-image">Upload Image</button>
+                  </div>
+                </div>
+                <button id="reasoning-toggle-btn" class="reasoning-toggle-btn" type="button" aria-pressed="false">Reasoning Off</button>
+              </div>
+              <div class="composer-actions">
+                <button id="voice-btn" type="button" title="Voice input" aria-label="Voice input" class="input-icon-btn toolbar-icon-btn">🎙️</button>
+                <button id="stop-btn" type="button" title="Stop generation (Esc)" aria-label="Stop generation" class="send-btn stop-btn" hidden>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="2" width="10" height="10" rx="2"/></svg>
+                </button>
+                <button id="send-btn" type="button" title="Send (Enter)" aria-label="Send message" class="send-btn" disabled>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M4 7l4-4 4 4"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="input-footer">
+            <span id="status-indicator" class="status offline">● Disconnected</span>
+            <span class="stream-state-indicator" hidden></span>
+            <span id="token-info" class="token-info"></span>
+            <button id="analytics-btn" class="footer-btn" title="Token Analytics">Analytics</button>
+            <button id="copy-all-btn" class="footer-btn" title="Copy entire conversation">📋 Copy All</button>
+            <button id="export-btn" class="footer-btn" title="Export chat (Ctrl+E)">Export</button>
+          </div>
+        </footer>
+      </div>
+
+      <!-- Playground View -->
+      <div class="view-panel" id="view-playground" hidden>
+        <div class="playground-page">
+          <!-- Playground Header -->
+          <div class="pg-header">
+            <h2>Prompt Playground</h2>
+            <p class="pg-subtitle">Test prompts, tweak parameters, and compare outputs side by side.</p>
+          </div>
+
+          <!-- Main Content: Input + Output -->
+          <div class="pg-main">
+            <!-- Left: Prompt Input Card -->
+            <div class="pg-card pg-input-card">
+              <div class="pg-card-header">
+                <h3>Prompt</h3>
+              </div>
+              <div class="pg-card-body">
+                <textarea id="playground-prompt" class="pg-textarea" rows="10" placeholder="Enter your prompt here..." spellcheck="false"></textarea>
+              </div>
+              <div class="pg-card-footer">
+                <div class="pg-params">
+                  <div class="pg-param">
+                    <label for="pg-temp">Temperature</label>
+                    <div class="pg-param-control">
+                      <input type="range" id="pg-temp" min="0" max="2" step="0.1" value="0.7">
+                      <span id="pg-temp-val" class="pg-param-value">0.7</span>
+                    </div>
+                  </div>
+                  <div class="pg-param">
+                    <label for="pg-max-tokens">Max Tokens</label>
+                    <input type="number" id="pg-max-tokens" class="pg-number-input" value="256" min="1" max="4096">
+                  </div>
+                </div>
+                <div class="pg-actions">
+                  <button id="playground-run" class="btn-primary pg-run-btn">
+                    <span class="pg-run-icon">▶</span> Run
+                    <kbd class="pg-kbd">Ctrl+Enter</kbd>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Output Card -->
+            <div class="pg-card pg-output-card">
+              <div class="pg-card-header">
+                <h3>Output</h3>
+              </div>
+              <div class="pg-card-body">
+                <div id="playground-output" class="pg-output-content">
+                  <div class="pg-empty-state">
+                    <span class="pg-empty-icon">🧪</span>
+                    <p>Run a prompt to see the output here</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- History Section -->
+          <div class="pg-history">
+            <div class="pg-history-header">
+              <h3>Recent Runs</h3>
+              <button id="playground-clear" class="btn-ghost" type="button">Clear All</button>
+            </div>
+            <div id="playground-history" class="pg-history-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal" hidden>
+      <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1">
+        <h3 id="settings-title">Settings</h3>
+        <div class="modal-body">
+
+          <div class="settings-tabs" role="tablist">
+            <button class="settings-tab active" type="button" data-tab="general" id="tab-general" role="tab" aria-selected="true" aria-controls="panel-general">General</button>
+            <button class="settings-tab" type="button" data-tab="model" id="tab-model" role="tab" aria-selected="false" aria-controls="panel-model">Model</button>
+            <button class="settings-tab" type="button" data-tab="locale" id="tab-locale" role="tab" aria-selected="false" aria-controls="panel-locale">Locale</button>
+          </div>
+
+          <div class="settings-panel" data-panel="general" id="panel-general" role="tabpanel" aria-labelledby="tab-general">
+            <div class="setting-group">
+              <label for="prompt-template">Template</label>
+              <select id="prompt-template" class="setting-group select">
+                <option value="">Custom</option>
+              </select>
+            </div>
+            <div class="setting-group">
+              <label for="system-prompt">System Prompt</label>
+              <textarea id="system-prompt" rows="3" placeholder="You are a helpful assistant.">You are a helpful assistant.</textarea>
+            </div>
+            <div class="setting-group">
+              <label for="show-thinking">Show Thinking Blocks</label>
+              <input type="checkbox" id="show-thinking" checked />
+            </div>
+            <div class="setting-group">
+              <label for="api-endpoint">API Endpoint</label>
+              <input type="text" id="api-endpoint" value="/v1/chat/completions" />
+            </div>
+          </div>
+
+          <div class="settings-panel" data-panel="model" id="panel-model" role="tabpanel" aria-labelledby="tab-model" hidden>
+            <div class="setting-group">
+              <label for="provider-model">Provider Model</label>
+              <select id="provider-model">
+                <option value="">Auto / Default</option>
+              </select>
+            </div>
+            <div class="setting-group">
+              <label for="temp-slider">Temperature <span id="temp-value" class="setting-value">0.7</span></label>
+              <input type="range" id="temp-slider" min="0" max="2" step="0.1" value="0.7" />
+            </div>
+            <div class="setting-group">
+              <label for="enable-thinking">Generate Reasoning Tokens</label>
+              <input type="checkbox" id="enable-thinking" />
+              <p class="setting-note">Turn this off for faster answers and fewer generated tokens.</p>
+            </div>
+            <div class="setting-group">
+              <label for="max-tokens">Max Tokens</label>
+              <input type="number" id="max-tokens" min="32" max="4096" value="1024" />
+            </div>
+            <div class="setting-group">
+              <label for="ctx-window">Context Window</label>
+              <input type="number" id="ctx-window" min="2048" max="65536" value="65536" />
+            </div>
+            <div class="setting-group">
+              <label for="auto-compact">Auto Compact Context (80%)</label>
+              <input type="checkbox" id="auto-compact" checked />
+              <p class="setting-note">When context usage reaches 80%, older messages are summarized automatically to keep chats responsive.</p>
+            </div>
+          </div>
+
+          <div class="settings-panel" data-panel="locale" id="panel-locale" role="tabpanel" aria-labelledby="tab-locale" hidden>
+            <div class="setting-group">
+              <label for="user-language">Language</label>
+              <select id="user-language">
+                <option value="auto">Auto-detect</option>
+                <option value="en-US">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="id-ID">Bahasa Indonesia</option>
+                <option value="zh-CN">中文 (简体)</option>
+                <option value="ja-JP">日本語</option>
+                <option value="ko-KR">한국어</option>
+                <option value="es-ES">Español</option>
+                <option value="fr-FR">Français</option>
+                <option value="de-DE">Deutsch</option>
+                <option value="pt-BR">Português (BR)</option>
+                <option value="ar-SA">العربية</option>
+              </select>
+            </div>
+            <div class="setting-group">
+              <label for="user-timezone">Timezone</label>
+              <select id="user-timezone">
+                <option value="auto">Auto-detect</option>
+              </select>
+            </div>
+            <div class="setting-group">
+              <label>Preview</label>
+              <div id="locale-preview" class="setting-preview"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="settings-close" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shortcuts Modal -->
+    <div class="modal-overlay" id="shortcuts-modal" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" tabindex="-1">
+        <h3 id="shortcuts-title">Keyboard Shortcuts</h3>
+        <div class="modal-body">
+          <div id="shortcuts-list" class="shortcuts-list"></div>
+        </div>
+        <div class="modal-actions">
+          <button id="shortcuts-close" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Modal -->
+    <div class="modal-overlay" id="analytics-modal" hidden>
+      <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+        <h3>Token Analytics</h3>
+        <div class="modal-body">
+          <div id="analytics-content" class="analytics-grid"></div>
+        </div>
+        <div class="modal-actions">
+          <button id="analytics-close" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="export-modal" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="export-title" tabindex="-1">
+        <h3 id="export-title">Export Chat</h3>
+        <div class="modal-body">
+          <div class="export-options">
+            <p class="export-section-label">Download as</p>
+            <div class="export-group">
+              <button class="export-option" type="button" data-format="markdown">
+                <span class="export-opt-icon">📄</span>
+                <span class="export-opt-body">
+                  <strong>Markdown</strong>
+                  <small>.md — preserves formatting</small>
+                </span>
+              </button>
+              <button class="export-option" type="button" data-format="json">
+                <span class="export-opt-icon">🗂️</span>
+                <span class="export-opt-body">
+                  <strong>JSON</strong>
+                  <small>.json — full conversation data</small>
+                </span>
+              </button>
+              <button class="export-option" type="button" data-format="text">
+                <span class="export-opt-icon">📝</span>
+                <span class="export-opt-body">
+                  <strong>Plain Text</strong>
+                  <small>.txt — simple readable format</small>
+                </span>
+              </button>
+            </div>
+            <p class="export-section-label">Share</p>
+            <div class="export-group">
+              <button class="export-option" type="button" data-format="share">
+                <span class="export-opt-icon">🔗</span>
+                <span class="export-opt-body">
+                  <strong>Share Link</strong>
+                  <small>Copy a shareable URL or HTML snippet</small>
+                </span>
+              </button>
+              <button class="export-option" type="button" data-format="import-share">
+                <span class="export-opt-icon">📥</span>
+                <span class="export-opt-body">
+                  <strong>Import Shared</strong>
+                  <small>Paste a shared conversation string</small>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="export-close" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Project Modal -->
+    <div class="modal-overlay" id="new-project-modal" hidden>
+      <div class="modal modal--compact" role="dialog" aria-modal="true" aria-labelledby="new-project-title" tabindex="-1">
+        <div class="modal-icon">📁</div>
+        <h3 id="new-project-title">New Project</h3>
+        <p class="modal-desc">Organize your conversations into a project folder.</p>
+        <div class="modal-body">
+          <div class="modal-field">
+            <label for="new-project-name">Project Name</label>
+            <input type="text" id="new-project-name" class="modal-input" placeholder="e.g. Research, Code Review, Notes..." maxlength="60" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="new-project-cancel" class="btn-modal-cancel" type="button">Cancel</button>
+          <button id="new-project-create" class="btn-primary" type="button">Create Project</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Project Confirmation Modal -->
+    <div class="modal-overlay" id="delete-project-modal" hidden>
+      <div class="modal modal--compact" role="dialog" aria-modal="true" aria-labelledby="delete-project-title" tabindex="-1">
+        <div class="modal-icon modal-icon--danger">⚠️</div>
+        <h3 id="delete-project-title">Delete Project</h3>
+        <p class="modal-desc">Are you sure you want to delete <strong id="delete-project-name"></strong>? All conversations will be moved to General.</p>
+        <div class="modal-actions">
+          <button id="delete-project-cancel" class="btn-modal-cancel" type="button">Cancel</button>
+          <button id="delete-project-confirm" class="btn-danger" type="button">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rename Conversation Modal -->
+    <div class="modal-overlay" id="rename-modal" hidden>
+      <div class="modal modal--compact" role="dialog" aria-modal="true" aria-labelledby="rename-modal-title" tabindex="-1">
+        <div class="modal-icon">✏️</div>
+        <h3 id="rename-modal-title">Rename Conversation</h3>
+        <div class="modal-body">
+          <div class="modal-field">
+            <label for="rename-modal-input">New Name</label>
+            <input type="text" id="rename-modal-input" class="modal-input" placeholder="Conversation name..." maxlength="100" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="rename-modal-cancel" class="btn-modal-cancel" type="button">Cancel</button>
+          <button id="rename-modal-confirm" class="btn-primary" type="button">Rename</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Move to Folder Modal -->
+    <div class="modal-overlay" id="move-folder-modal" hidden>
+      <div class="modal modal--compact" role="dialog" aria-modal="true" aria-labelledby="move-folder-title" tabindex="-1">
+        <div class="modal-icon">📁</div>
+        <h3 id="move-folder-title">Move to Folder</h3>
+        <div class="modal-body">
+          <div id="move-folder-list" class="move-folder-list"></div>
+          <div class="modal-field" style="margin-top:0.75rem">
+            <label for="move-folder-new-input">Or create a new folder</label>
+            <input type="text" id="move-folder-new-input" class="modal-input" placeholder="New folder name..." maxlength="60" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="move-folder-cancel" class="btn-modal-cancel" type="button">Cancel</button>
+          <button id="move-folder-confirm" class="btn-primary" type="button">Move</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Shared Chat Modal -->
+    <div class="modal-overlay" id="import-share-modal" hidden>
+      <div class="modal modal--compact" role="dialog" aria-modal="true" aria-labelledby="import-share-title" tabindex="-1">
+        <div class="modal-icon">📥</div>
+        <h3 id="import-share-title">Import Shared Chat</h3>
+        <p class="modal-desc">Paste the base64 share string below.</p>
+        <div class="modal-body">
+          <div class="modal-field">
+            <label for="import-share-input">Share String</label>
+            <textarea id="import-share-input" class="modal-input" rows="4" placeholder="Paste base64 string here..." autocomplete="off" spellcheck="false"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="import-share-cancel" class="btn-modal-cancel" type="button">Cancel</button>
+          <button id="import-share-confirm" class="btn-primary" type="button">Import</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Context Menu (right-click on conversations) -->
+    <div id="conv-context-menu" class="context-menu" hidden>
+      <button data-action="rename" class="context-menu-item">Rename</button>
+      <button data-action="move-folder" class="context-menu-item">Move to folder...</button>
+      <button data-action="delete" class="context-menu-item danger">Delete</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

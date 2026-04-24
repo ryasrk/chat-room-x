@@ -1,0 +1,43 @@
+# Models (too large for git)
+models/*.gguf
+
+# Build artifacts
+engines/
+build/
+*.o
+*.so
+
+# Node
+node_modules/
+dashboard/dist/
+
+# Python
+env
+env/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Results (keep structure, not data)
+results/*.json
+results/run_*/
+
+# Env files
+.env
+env_path.txt
+
+# Runtime data
+data/tenrary.db
+data/tenrary.db-shm
+data/tenrary.db-wal
+data/agent-workspaces/
+
+# Skill large binary assets (SKILL.md, scripts/, references/ are tracked)
+data/skills/*/canvas-fonts/
+data/skills/*/data/
+data/skills/**/theme-showcase.pdf
+data/skills/**/schemas/
+data/skills/**/evals/
+
+# OS
+.DS_Store
