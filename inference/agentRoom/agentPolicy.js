@@ -6,30 +6,35 @@ const BASE_AGENT_POLICIES = {
     canWriteImplementation: false,
     canWriteDocumentation: true,
     canRunPython: false,
+    canRunTerminal: false,
     canManageTasks: true,
   },
   coder: {
     canWriteImplementation: true,
     canWriteDocumentation: true,
     canRunPython: true,
+    canRunTerminal: true,
     canManageTasks: true,
   },
   reviewer: {
     canWriteImplementation: false,
     canWriteDocumentation: true,
     canRunPython: true,
+    canRunTerminal: true,
     canManageTasks: false,
   },
   scribe: {
     canWriteImplementation: false,
     canWriteDocumentation: true,
     canRunPython: false,
+    canRunTerminal: false,
     canManageTasks: false,
   },
   default: {
     canWriteImplementation: false,
     canWriteDocumentation: true,
     canRunPython: false,
+    canRunTerminal: false,
     canManageTasks: false,
   },
 };
@@ -56,6 +61,7 @@ export function getAgentPolicy({ agentName = '', allowedTools = [] } = {}) {
     canWriteImplementation: basePolicy.canWriteImplementation,
     canWriteDocumentation: basePolicy.canWriteDocumentation,
     canRunPython: basePolicy.canRunPython && (!hasToolRestrictions || allowedToolSet.has('run_python')),
+    canRunTerminal: basePolicy.canRunTerminal && (!hasToolRestrictions || allowedToolSet.has('run_in_terminal')),
     canManageTasks: basePolicy.canManageTasks,
   };
 }

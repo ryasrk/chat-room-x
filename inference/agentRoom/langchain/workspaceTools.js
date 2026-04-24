@@ -7,7 +7,7 @@
  */
 
 import { DynamicStructuredTool } from '@langchain/core/tools';
-import { listFiles, readFile, writeFile, updateFile } from '../fileTools.js';
+import { listFiles, readFile, writeFile, updateFile, deleteFile } from '../fileTools.js';
 import { assertAgentCanRunPython, assertAgentCanWritePath, getAgentPolicy } from '../agentPolicy.js';
 import { runWorkspacePythonFile } from '../workspaceRuntime.js';
 
@@ -186,7 +186,81 @@ export function createWorkspaceTools(workspacePath, context = {}) {
     },
   });
 
-  return [listFilesTool, readFileTool, writeFileTool, updateFileTool, runPythonTool];
+  const multiReplaceTool = new DynamicStructuredTool({
+    name: 'multi_replace_file',
+    description:
+      'Apply multiple string replacements to one or more files in a single call. ' +
+      'More efficient than calling update_file multiple times. ' +
+      'Each replacement specifies a file path, the exact old string, and the new string.',
+    schema: {
+      type: 'object',
+      properties: {
+        replacements: {
+          type: 'array',
+          description: 'Array of replacement operations: [{path, old_str, new_str}, ...].',
+          items: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Relative path to the file.' },
+              old_str: { type: 'string', description: 'Exact string to find.' },
+              new_str: { type: 'string', description: 'Replacement string.' },
+            },
+            required: ['path', 'old_str', 'new_str'],
+          },
+        },
+      },
+      required: ['replacements'],
+    },
+    func: async ({ replacements }) => {
+      if (!Array.isArray(replacements) || replacements.length === 0) {
+        return JSON.stringify({ error: 'Replacements array is required and must not be empty.' });
+      }
+      if (replacements.length > 20) {
+        return JSON.stringify({ error: 'Maximum 20 replacements per call.' });
+      }
+
+      const results = [];
+      for (const { path, old_str, new_str } of replacements) {
+        try {
+          assertAgentCanWritePath(agentPolicy, path);
+          const result = await updateFile(workspacePath, path, old_str, new_str);
+          results.push({ path, status: 'ok', replacements: result.replacements });
+        } catch (error) {
+          results.push({ path, status: 'error', error: error.message });
+        }
+      }
+
+      const succeeded = results.filter((r) => r.status === 'ok').length;
+      const failed = results.filter((r) => r.status === 'error').length;
+      return JSON.stringify({ results, summary: { succeeded, failed, total: results.length } });
+    },
+  });
+
+  const deleteFileTool = new DynamicStructuredTool({
+    name: 'delete_file',
+    description: 'Delete a file from the workspace. Cannot delete directories.',
+    schema: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'Relative path to the file to delete.',
+        },
+      },
+      required: ['path'],
+    },
+    func: async ({ path }) => {
+      try {
+        assertAgentCanWritePath(agentPolicy, path);
+        const result = await deleteFile(workspacePath, path);
+        return JSON.stringify(result);
+      } catch (error) {
+        return JSON.stringify({ error: error.message });
+      }
+    },
+  });
+
+  return [listFilesTool, readFileTool, writeFileTool, updateFileTool, multiReplaceTool, deleteFileTool, runPythonTool];
 }
 
 /**

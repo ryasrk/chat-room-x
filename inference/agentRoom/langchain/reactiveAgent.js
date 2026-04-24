@@ -14,11 +14,14 @@
 import { HumanMessage, SystemMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
 import { createAgentModel, createRouterModel } from './chatModelAdapter.js';
 import { createWorkspaceTools, createCollaborationTools } from './workspaceTools.js';
+import { createAdvancedTools } from './advancedTools.js';
 import { createMcpTools } from './mcpTools.js';
 import { createSkillTools } from './skillTools.js';
 
 const MAX_TOOL_ITERATIONS = 20;
-const SKILL_TOOL_NAMES_SET = new Set(['search_skills', 'read_skill', 'list_skill_files']);
+const MAX_TRUNCATION_CONTINUES = 3;
+const SKILL_TOOL_NAMES_SET = new Set(['search_skills', 'read_skill', 'list_skill_files', 'memory', 'manage_todo_list']);
+const MUTATING_TOOL_NAMES = new Set(['write_file', 'update_file', 'multi_replace_file', 'delete_file']);
 const RELEVANCE_THRESHOLD = 0.3;
 const SIMPLE_QUERY_MAX_WORDS = 12;
 const SIMPLE_QUERY_MAX_CHARS = 80;
@@ -61,7 +64,16 @@ const KNOWN_TOOL_NAMES = new Set([
   'read_file',
   'write_file',
   'update_file',
+  'multi_replace_file',
+  'delete_file',
   'run_python',
+  'grep_search',
+  'file_search',
+  'run_in_terminal',
+  'manage_todo_list',
+  'memory',
+  'get_changed_files',
+  'fetch_webpage',
   'propose',
   'respond_to_proposal',
   'think_aloud',
@@ -88,11 +100,14 @@ export function getRoleOperatingGuidance(agent) {
 
   if (agentName === 'coder') {
     return [
-      'ORIENT: Read the plan in notes/plan.md and any existing workspace files before writing code.',
-      'RESEARCH: Use search_skills ONCE with keywords matching the implementation task (e.g., "frontend CSS", "API endpoint", "form validation"). If no relevant skill is found, skip and proceed to IMPLEMENT. Do NOT retry search_skills with different keywords.',
+      'ORIENT: Read the plan in notes/plan.md and any existing workspace files before writing code. Use grep_search to find patterns and file_search to locate files by name.',
+      'RESEARCH: Use search_skills ONCE with keywords matching the implementation task. If no relevant skill is found, skip and proceed to IMPLEMENT. Do NOT retry search_skills with different keywords.',
       'IMPLEMENT: Write or update files in src/ following the plan. Keep code clean, well-structured, and commented.',
       'LARGE FILES: For large files (HTML pages, full components), split into multiple write_file calls — e.g. write the HTML structure first, then use update_file to add CSS and JS sections. Never try to write more than ~200 lines in a single write_file call.',
-      'VERIFY: After writing, re-read your files to check for obvious errors or missing pieces.',
+      'BATCH EDITS: Use multi_replace_file to apply multiple edits across files in a single call — more efficient than calling update_file repeatedly.',
+      'TERMINAL: Use run_in_terminal to run build scripts, linters, tests, or npm/yarn commands. Provide an explanation of what the command does.',
+      'VERIFY: After writing, re-read your files to check for obvious errors. Use run_in_terminal to run tests or linters if available.',
+      'MEMORY: Use memory(command="view") to check for context from previous sessions. Use memory(command="create") to save important decisions for future sessions.',
       'HANDOFF: When implementation is complete, delegate to @reviewer for quality check.',
       'BOUNDARIES: Do NOT write review notes or plans. Do NOT hand work off to yourself.',
       'STOP CONDITION: If you receive a handoff but you have NO new code to write (no changes requested, task already implemented), say "No changes needed" and STOP. Do NOT hand off to @reviewer if you made zero file changes.',
@@ -102,9 +117,9 @@ export function getRoleOperatingGuidance(agent) {
   if (agentName === 'reviewer') {
     return [
       'ORIENT: Read the plan in notes/plan.md to understand what was intended.',
-      'INSPECT: Read all implementation files in src/ carefully. Check for correctness, completeness, and quality.',
+      'INSPECT: Read all implementation files in src/ carefully. Use grep_search to find patterns across files. Check for correctness, completeness, and quality.',
       'RESEARCH: Use search_skills ONCE with keywords like "code review" or the relevant domain. If no relevant skill is found, skip and proceed to INSPECT. Do NOT retry search_skills with different keywords.',
-      'EVALUATE: Check for bugs, edge cases, and consistency.',
+      'EVALUATE: Check for bugs, edge cases, and consistency. Use run_in_terminal to run tests or linters. Use get_changed_files to review diffs.',
       'DECIDE: If CRITICAL issues are found, delegate back to @coder with specific fix instructions. If approved, state approval clearly and STOP.',
       'BOUNDARIES: Do NOT create or overwrite production code in src/ unless the user explicitly asks for a code fix as part of review.',
       'STOP CONDITION: After you approve the work, the pipeline ENDS. Do NOT hand off to anyone. If you already reviewed and approved this work, say "Already reviewed and approved" and STOP. Do NOT hand off to @coder just to say there are no changes.',
@@ -167,9 +182,10 @@ function buildReactiveSystemPrompt(agent, roomContext) {
     `\nRoom: ${roomContext.roomName}${roomContext.roomDescription ? ` — ${roomContext.roomDescription}` : ''}`,
     `Team: ${agentList}`,
     `\nResource Limits:`,
-    `- Max tool iterations per turn: ${MAX_TOOL_ITERATIONS} (you can call up to ${MAX_TOOL_ITERATIONS} tools before your turn ends)`,
-    `- Max output tokens per response: ~8192 tokens (~6000 words). If your response is cut off mid-sentence, the system will automatically ask you to continue.`,
-    `- Plan your work to fit within these limits. For large tasks, break them into smaller tool calls rather than one massive output.`,
+    `- Tool budget: ${MAX_TOOL_ITERATIONS} tool calls per turn. Skill lookups (search_skills, read_skill) are free and don't count.`,
+    `- Output limit: ~8192 tokens per LLM response. If you get cut off, the system auto-continues up to ${MAX_TRUNCATION_CONTINUES} times.`,
+    `- Strategy: Break large work into multiple small tool calls. Write files in chunks (~150 lines each). Use write_file for new files, update_file to append/modify.`,
+    `- If you run out of budget mid-task, summarize what's done and what remains so the next agent (or a retry) can pick up.`,
     `\nWorkflow:\n${roleGuidance}`,
     '\nRules: Be concise. Use @agent to delegate. Read before writing. Only claim work you actually did with tools. NEVER mention your own @name — you cannot delegate to yourself.',
     '\nLanguage: ALWAYS reply in the same language the user used. If the user writes in Indonesian, reply in Indonesian. If in English, reply in English.',
@@ -681,13 +697,17 @@ export async function runReactiveAgentTurn({
   }).filter((tool) => getAllowedCollaborationToolNames(agent).has(tool.name));
 
   // Filter workspace tools based on agent's allowed tools
-  const allowedToolNames = new Set(agent.tools || ['list_files', 'read_file', 'write_file', 'update_file']);
+  const allowedToolNames = new Set(agent.tools || ['list_files', 'read_file', 'write_file', 'update_file', 'multi_replace_file', 'delete_file']);
   const filteredWorkspaceTools = workspaceTools.filter((t) => allowedToolNames.has(t.name));
+  const advancedTools = createAdvancedTools(roomContext.workspacePath, {
+    agentName: agent.name,
+    allowedTools: agent.tools || [],
+  });
   const mcpTools = await createMcpTools(agent.provider_config);
   const skillTools = createSkillTools({
     allowedSkillIds: roomContext.allowedSkillIds || null,
   });
-  const allTools = [...filteredWorkspaceTools, ...collaborationTools, ...skillTools, ...mcpTools];
+  const allTools = [...filteredWorkspaceTools, ...advancedTools, ...collaborationTools, ...skillTools, ...mcpTools];
   console.log(`[${agent.name}] Tools bound: ${allTools.map(t => t.name).join(', ')} (${allTools.length} total, ${skillTools.length} skill tools)`);
   const toolCallingMode = getToolCallingMode(agent);
   const baseModel = createAgentModel(agent);
@@ -839,11 +859,10 @@ export async function runReactiveAgentTurn({
   let explicitToolRetryCount = 0;
   let postToolRetryCount = 0;
   let truncationContinueCount = 0;
-  const MAX_TRUNCATION_CONTINUES = 3;
 
   // ── Tool Result Cache ───────────────────────────────────────
   // Cache read-only tool results within this turn to avoid redundant LLM calls.
-  const CACHEABLE_TOOLS = new Set(['list_files', 'read_file', 'search_skills', 'read_skill', 'list_skill_files']);
+  const CACHEABLE_TOOLS = new Set(['list_files', 'read_file', 'search_skills', 'read_skill', 'list_skill_files', 'grep_search', 'file_search', 'memory']);
   const toolResultCache = new Map();
 
   try {
@@ -863,7 +882,10 @@ export async function runReactiveAgentTurn({
       let result;
       try {
         if (onThinking) {
-          onThinking(agent.name, iteration === 0 ? 'Thinking...' : `Thinking (step ${iteration + 1})...`);
+          const budgetLeft = MAX_TOOL_ITERATIONS - executedToolCount;
+          onThinking(agent.name, iteration === 0
+            ? `Thinking... (${budgetLeft} tool calls remaining)`
+            : `Thinking (step ${iteration + 1}/${MAX_TOOL_ITERATIONS}, ${budgetLeft} tools left)...`);
         }
         const invokeOpts = signal ? { signal } : undefined;
         result = await (nativeToolCallingEnabled ? nativeModel : baseModel).invoke(messages, invokeOpts);
@@ -901,26 +923,81 @@ export async function runReactiveAgentTurn({
         usageAccumulator.provider = result.additional_kwargs.provider;
       }
 
-      // ── Auto-continue on max_tokens truncation ──────────────
+      // ── Auto-continue on max_tokens truncation ──────────────────
+      // When the LLM hits its output token limit, we try to salvage any
+      // completed tool calls from the partial response, execute them,
+      // then ask the LLM to continue where it left off.
       const finishReason = result.additional_kwargs?.finishReason;
-      if (finishReason === 'length' && truncationContinueCount < MAX_TRUNCATION_CONTINUES) {
-        truncationContinueCount += 1;
-        // Response was cut off by max_tokens — push partial result and ask to continue
-        messages.push(result);
-        messages.push(new HumanMessage(
-          `[system] Your response was cut off because it hit the output token limit (continuation ${truncationContinueCount}/${MAX_TRUNCATION_CONTINUES}). `
-          + 'Continue EXACTLY where you left off. Do NOT repeat what you already wrote. '
-          + 'If you were in the middle of a tool call, complete just that tool call. '
-          + 'If you were writing a file, use update_file to append the remaining content instead of rewriting the whole file.',
-        ));
-        console.log(`[${agent.name}] Auto-continuing: response truncated by max_tokens (iteration ${iteration + 1}, continue ${truncationContinueCount}/${MAX_TRUNCATION_CONTINUES})`);
-        if (onThinking) {
-          onThinking(agent.name, `Continuing (truncated ${truncationContinueCount}/${MAX_TRUNCATION_CONTINUES})...`);
+      if (finishReason === 'length') {
+        // First, try to extract and execute any COMPLETE tool calls from the truncated response
+        const truncatedContent = normalizeResponseContent(result.content);
+        const truncatedNativeToolCalls = extractNativeToolCalls(result);
+        const truncatedValidToolNames = new Set(allTools.map((tool) => tool.name));
+        const truncatedNormalized = truncatedNativeToolCalls
+          .map((tc) => normalizeNativeToolCall(tc, truncatedValidToolNames))
+          .filter(Boolean);
+        const salvageableToolCalls = truncatedNormalized.length > 0
+          ? truncatedNormalized
+          : extractToolCalls(truncatedContent);
+
+        if (salvageableToolCalls.length > 0) {
+          console.log(`[${agent.name}] Salvaged ${salvageableToolCalls.length} tool call(s) from truncated response`);
+          messages.push(result);
+
+          // Execute the salvaged tool calls
+          for (const toolCall of salvageableToolCalls) {
+            const tool = allTools.find((t) => t.name === toolCall.tool);
+            if (!tool) continue;
+            try {
+              if (onToolUse) onToolUse(agent.name, toolCall.tool, toolCall);
+              const toolResult = await tool.func(toolCall);
+              const normalized = normalizeToolExecutionResult(toolResult);
+              toolResults.push(normalized.error
+                ? { tool: toolCall.tool, error: normalized.error, result: normalized.result, params: toolCall }
+                : { tool: toolCall.tool, result: normalized.result, params: toolCall });
+              const nativeTC = truncatedNormalized.find((c) => c.id === toolCall.id);
+              if (nativeTC?.id) {
+                messages.push(new ToolMessage({
+                  content: normalized.error || formatToolMessageContent(normalized.result),
+                  tool_call_id: nativeTC.id,
+                }));
+              }
+              if (MUTATING_TOOL_NAMES.has(toolCall.tool)) {
+                toolResultCache.clear();
+              }
+              if (!SKILL_TOOL_NAMES_SET.has(toolCall.tool)) {
+                executedToolCount += 1;
+              }
+            } catch (err) {
+              console.log(`[${agent.name}] Salvaged tool ${toolCall.tool} failed: ${err.message}`);
+            }
+          }
+          // Reset truncation counter — we made progress
+          truncationContinueCount = 0;
         }
-        continue;
-      } else if (finishReason === 'length') {
-        // Exhausted continuation budget — treat partial content as final
-        console.log(`[${agent.name}] Max truncation continues reached (${MAX_TRUNCATION_CONTINUES}), treating partial response as final`);
+
+        if (truncationContinueCount < MAX_TRUNCATION_CONTINUES) {
+          truncationContinueCount += 1;
+          if (salvageableToolCalls.length === 0) {
+            messages.push(result);
+          }
+          const budgetLeft = MAX_TOOL_ITERATIONS - executedToolCount;
+          messages.push(new HumanMessage(
+            `[system] Your response was cut off by the output token limit (continuation ${truncationContinueCount}/${MAX_TRUNCATION_CONTINUES}). `
+            + `You have ${budgetLeft} tool calls remaining. `
+            + 'Continue EXACTLY where you left off. Do NOT repeat what you already wrote. '
+            + 'If you were in the middle of a tool call, complete just that tool call. '
+            + 'If you were writing a file, use update_file to append the remaining content instead of rewriting the whole file.',
+          ));
+          console.log(`[${agent.name}] Auto-continuing: truncated (iteration ${iteration + 1}, continue ${truncationContinueCount}/${MAX_TRUNCATION_CONTINUES}, ${budgetLeft} tools left)`);
+          if (onThinking) {
+            onThinking(agent.name, `Continuing (truncated ${truncationContinueCount}/${MAX_TRUNCATION_CONTINUES}, ${budgetLeft} tools left)...`);
+          }
+          continue;
+        } else {
+          // Exhausted continuation budget — treat partial content as final
+          console.log(`[${agent.name}] Max truncation continues reached (${MAX_TRUNCATION_CONTINUES}), treating partial response as final`);
+        }
       }
 
       const content = normalizeResponseContent(result.content);
@@ -1046,13 +1123,19 @@ export async function runReactiveAgentTurn({
         }
 
         // Invalidate cache when workspace is mutated
-        if (toolCall.tool === 'write_file' || toolCall.tool === 'update_file') {
+        if (MUTATING_TOOL_NAMES.has(toolCall.tool) || toolCall.tool === 'run_in_terminal') {
           toolResultCache.clear();
         }
 
         // Skill tools are free context-gathering — don't count against budget
         if (!SKILL_TOOL_NAMES_SET.has(toolCall.tool)) {
           executedToolCount += 1;
+        }
+
+        // Reset truncation counter after successful tool execution —
+        // if the agent gets truncated again, it's a fresh context
+        if (!currentToolResults[currentToolResults.length - 1]?.error) {
+          truncationContinueCount = 0;
         }
       }
 
@@ -1091,7 +1174,7 @@ export async function runReactiveAgentTurn({
     // After the main tool loop, give the agent one chance to review its own work.
     // Only triggers when the agent actually did meaningful work (wrote/updated files).
     const mutatingTools = toolResults.filter(
-      (r) => !r.error && (r.tool === 'write_file' || r.tool === 'update_file'),
+      (r) => !r.error && MUTATING_TOOL_NAMES.has(r.tool),
     );
     if (finalMessage && mutatingTools.length > 0 && executedToolCount < MAX_TOOL_ITERATIONS - 2) {
       const fileList = mutatingTools.map((r) => r.params?.path || 'unknown').join(', ');
