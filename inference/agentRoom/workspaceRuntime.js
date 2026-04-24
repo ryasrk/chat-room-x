@@ -19,23 +19,37 @@ function trimOutput(output) {
   return `${output.slice(0, MAX_RUNTIME_OUTPUT_BYTES)}\n... output truncated ...`;
 }
 
+function isExecNotFoundError(error) {
+  if (!error) return false;
+  // Node.js style
+  if (error.code === 'ENOENT') return true;
+  // Bun style: "Executable not found in $PATH: ..."
+  if (typeof error.message === 'string' && error.message.includes('Executable not found')) return true;
+  return false;
+}
+
 function execFileResult(command, args, options = {}) {
   return new Promise((resolve, reject) => {
-    execFile(command, args, {
-      maxBuffer: MAX_RUNTIME_OUTPUT_BYTES,
-      ...options,
-    }, (error, stdout, stderr) => {
-      if (error?.code === 'ENOENT') {
-        reject(error);
-        return;
-      }
+    try {
+      execFile(command, args, {
+        maxBuffer: MAX_RUNTIME_OUTPUT_BYTES,
+        ...options,
+      }, (error, stdout, stderr) => {
+        if (isExecNotFoundError(error)) {
+          reject(error);
+          return;
+        }
 
-      resolve({
-        error: error || null,
-        stdout: trimOutput(stdout),
-        stderr: trimOutput(stderr),
+        resolve({
+          error: error || null,
+          stdout: trimOutput(stdout),
+          stderr: trimOutput(stderr),
+        });
       });
-    });
+    } catch (syncError) {
+      // Bun may throw synchronously when executable is not found
+      reject(syncError);
+    }
   });
 }
 
@@ -65,35 +79,48 @@ export async function ensureWorkspacePythonEnv(workspaceRoot) {
     };
   }
 
+  // Ensure workspace directory exists before creating venv
+  await fs.mkdir(workspaceRoot, { recursive: true });
+
   let lastError = null;
-  for (const candidate of getPythonCandidates()) {
+  const candidates = getPythonCandidates();
+  for (const candidate of candidates) {
     try {
+      console.log(`[workspace] Trying venv creation with: ${candidate} (cwd: ${workspaceRoot})`);
       const result = await execFileResult(candidate, ['-m', 'venv', DEFAULT_VENV_DIR], {
         cwd: workspaceRoot,
         timeout: VENV_CREATION_TIMEOUT_MS,
       });
 
       if (result.error) {
-        lastError = new Error(result.stderr || result.error.message || `Failed to create venv with ${candidate}`);
+        const msg = result.stderr || result.error.message || `Failed to create venv with ${candidate}`;
+        console.warn(`[workspace] ${candidate} failed: ${msg}`);
+        lastError = new Error(msg);
         continue;
       }
 
       if (!existsSync(pythonBinary)) {
+        console.warn(`[workspace] ${candidate} ran but ${DEFAULT_VENV_DIR}/bin/python not found`);
         lastError = new Error(`Virtual environment was created without ${DEFAULT_VENV_DIR}/bin/python`);
         continue;
       }
 
+      console.log(`[workspace] venv created successfully with ${candidate}`);
       return {
         created: true,
         pythonBinary,
         venvPath: DEFAULT_VENV_DIR,
       };
     } catch (error) {
+      console.warn(`[workspace] ${candidate} not available: ${error.message}`);
       lastError = error;
     }
   }
 
-  throw new Error(lastError?.message || 'Unable to create a Python virtual environment for this workspace.');
+  throw new Error(
+    `Unable to create Python venv (tried: ${candidates.join(', ')}). ` +
+    `Last error: ${lastError?.message || 'unknown'}`,
+  );
 }
 
 function normalizeRuntimeArgs(args) {

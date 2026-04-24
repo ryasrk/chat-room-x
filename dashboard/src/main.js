@@ -520,6 +520,9 @@ updateContextBar();
 updateTokenInfo();
 checkShareUrl();
 
+// Auto-fetch provider models on startup (cloud-only mode)
+showEnowxModelList().catch(() => {});
+
 // Lazy-load CDN rendering libraries after first user interaction
 // (saves ~200-400ms on initial page load)
 const triggerPreload = () => {

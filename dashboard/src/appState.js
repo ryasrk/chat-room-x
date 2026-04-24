@@ -21,7 +21,7 @@ export const state = {
   _pendingBranches: null,
   _pendingAutoTitle: null,
   settings: {
-    temperature: 0.7,
+    temperature: 0,
     maxTokens: 1024,
     maxContext: 65536,
     autoCompactEnabled: true,
