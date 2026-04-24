@@ -45,7 +45,8 @@ function isAllowedDashboardOrigin(origin) {
     return allowedOrigins.includes(origin);
   }
 
-  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+  // Allow localhost and any IP on the dashboard port (non-standard port is the security layer)
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\d+\.\d+\.\d+\.\d+)(:\d+)?$/i.test(origin);
 }
 
 function wsSend(ws, payload) {
