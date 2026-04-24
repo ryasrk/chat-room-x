@@ -391,7 +391,9 @@ function renderBlockElements(text, ctx) {
   const result = [];
 
   // ── Nested list stack ──────────────────────────────────────
-  // Each entry: { type: 'ol'|'ul', indent: number }
+  // Each entry: { type: 'ol'|'ul', indent: number, liOpen: boolean }
+  // liOpen tracks whether the current <li> is still open (waiting for
+  // a potential nested sub-list to be placed inside it).
   const listStack = [];
 
   function getIndent(raw) {
@@ -399,25 +401,35 @@ function renderBlockElements(text, ctx) {
     return match ? match[1].length : 0;
   }
 
-  function currentListType() {
-    return listStack.length > 0 ? listStack[listStack.length - 1].type : null;
-  }
-
   function currentIndent() {
     return listStack.length > 0 ? listStack[listStack.length - 1].indent : -1;
   }
 
+  /** Close the open <li> on the top-most list level (if any). */
+  function closeOpenLi() {
+    if (listStack.length > 0 && listStack[listStack.length - 1].liOpen) {
+      result.push('</li>');
+      listStack[listStack.length - 1].liOpen = false;
+    }
+  }
+
   function openList(type, indent) {
+    // Don't close the parent <li> — the nested list goes INSIDE it
     const tag = type === 'ol' ? 'ol' : 'ul';
     result.push(`<${tag}>`);
-    listStack.push({ type, indent });
+    listStack.push({ type, indent, liOpen: false });
   }
 
   function closeList() {
     if (listStack.length === 0) return;
+    // Close any open <li> in this list level first
+    closeOpenLi();
     const { type } = listStack.pop();
     const tag = type === 'ol' ? 'ol' : 'ul';
     result.push(`</${tag}>`);
+    // After closing a nested list, close the parent <li> that contained it
+    // (the parent li was left open to hold this nested list)
+    closeOpenLi();
   }
 
   function closeAllLists() {
@@ -435,13 +447,28 @@ function renderBlockElements(text, ctx) {
       if (top.indent > indent) {
         closeList();
       } else if (top.indent === indent && top.type !== newType) {
-        // Same indent, different list type → close and reopen
         closeList();
         break;
       } else {
         break;
       }
     }
+  }
+
+  function addListItem(content, indent, type) {
+    closeListsToIndent(indent, type);
+
+    // Open a new list if needed (deeper indent or no list yet)
+    if (listStack.length === 0 || currentIndent() < indent) {
+      openList(type, indent);
+    } else {
+      // Same level — close the previous <li> before starting a new one
+      closeOpenLi();
+    }
+
+    // Open a new <li> but DON'T close it yet — a nested list may follow
+    result.push(`<li>${renderInlineMarkdown(content, ctx)}`);
+    listStack[listStack.length - 1].liOpen = true;
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -479,26 +506,14 @@ function renderBlockElements(text, ctx) {
     // Unordered list item
     const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
     if (ulMatch) {
-      const indent = getIndent(line);
-      closeListsToIndent(indent, 'ul');
-
-      if (listStack.length === 0 || currentIndent() < indent) {
-        openList('ul', indent);
-      }
-      result.push(`<li>${renderInlineMarkdown(ulMatch[2], ctx)}</li>`);
+      addListItem(ulMatch[2], getIndent(line), 'ul');
       continue;
     }
 
     // Ordered list item
     const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
     if (olMatch) {
-      const indent = getIndent(line);
-      closeListsToIndent(indent, 'ol');
-
-      if (listStack.length === 0 || currentIndent() < indent) {
-        openList('ol', indent);
-      }
-      result.push(`<li>${renderInlineMarkdown(olMatch[2], ctx)}</li>`);
+      addListItem(olMatch[2], getIndent(line), 'ol');
       continue;
     }
 
