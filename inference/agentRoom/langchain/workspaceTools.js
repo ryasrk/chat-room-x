@@ -103,7 +103,20 @@ export function createWorkspaceTools(workspacePath, context = {}) {
     func: async ({ path, content }) => {
       try {
         assertAgentCanWritePath(agentPolicy, path);
-        const result = await writeFile(workspacePath, path, content);
+        // Coerce content to string — LLMs sometimes send arrays, objects, or numbers
+        let safeContent;
+        if (typeof content === 'string') {
+          safeContent = content;
+        } else if (Array.isArray(content)) {
+          safeContent = content.join('\n');
+        } else if (content != null && typeof content === 'object') {
+          safeContent = JSON.stringify(content, null, 2);
+        } else if (content != null) {
+          safeContent = String(content);
+        } else {
+          return JSON.stringify({ error: 'Content is required and must not be empty.' });
+        }
+        const result = await writeFile(workspacePath, path, safeContent);
         return JSON.stringify(result);
       } catch (error) {
         return JSON.stringify({ error: error.message });

@@ -77,7 +77,7 @@ export function getRoleOperatingGuidance(agent) {
   if (agentName === 'planner') {
     return [
       'ORIENT: Read the request carefully. Use list_files and read_file to understand the current workspace state.',
-      'RESEARCH: Use search_skills with 2-3 keywords from the task. Read the top matching skill for domain guidance.',
+      'RESEARCH: Use search_skills ONCE with 2-3 keywords from the task. If no relevant skill is found, skip this step entirely and proceed. Do NOT retry search_skills with different keywords.',
       'THINK: Use think_aloud to share your analysis — what needs to be built, key decisions, and risks.',
       'PLAN: Write a clear plan in notes/plan.md with numbered steps, file structure, and technology choices.',
       'DELEGATE: Hand off implementation to @coder with a clear scope.',
@@ -89,7 +89,7 @@ export function getRoleOperatingGuidance(agent) {
   if (agentName === 'coder') {
     return [
       'ORIENT: Read the plan in notes/plan.md and any existing workspace files before writing code.',
-      'RESEARCH: Use search_skills with keywords matching the implementation task (e.g., "frontend CSS", "API endpoint", "form validation"). Read the top skill for patterns and templates.',
+      'RESEARCH: Use search_skills ONCE with keywords matching the implementation task (e.g., "frontend CSS", "API endpoint", "form validation"). If no relevant skill is found, skip and proceed to IMPLEMENT. Do NOT retry search_skills with different keywords.',
       'IMPLEMENT: Write or update files in src/ following the plan. Keep code clean, well-structured, and commented.',
       'VERIFY: After writing, re-read your files to check for obvious errors or missing pieces.',
       'HANDOFF: When implementation is complete, delegate to @reviewer for quality check.',
@@ -102,7 +102,7 @@ export function getRoleOperatingGuidance(agent) {
     return [
       'ORIENT: Read the plan in notes/plan.md to understand what was intended.',
       'INSPECT: Read all implementation files in src/ carefully. Check for correctness, completeness, and quality.',
-      'RESEARCH: Use search_skills with keywords like "code review" or the relevant domain to find review checklists and best practices.',
+      'RESEARCH: Use search_skills ONCE with keywords like "code review" or the relevant domain. If no relevant skill is found, skip and proceed to INSPECT. Do NOT retry search_skills with different keywords.',
       'EVALUATE: Check for bugs, edge cases, and consistency.',
       'DECIDE: If CRITICAL issues are found, delegate back to @coder with specific fix instructions. If approved, state approval clearly and STOP.',
       'BOUNDARIES: Do NOT create or overwrite production code in src/ unless the user explicitly asks for a code fix as part of review.',
@@ -121,7 +121,7 @@ export function getRoleOperatingGuidance(agent) {
 
   return [
     'ORIENT: Understand the current workspace state and what is being asked.',
-    'RESEARCH: Use search_skills to find relevant domain knowledge before acting.',
+    'RESEARCH: Use search_skills ONCE to find relevant domain knowledge. If no relevant skill is found, skip and proceed. Do NOT retry search_skills with different keywords.',
     'EXECUTE: Stay within your role and build on existing files.',
     'BOUNDARIES: Only change implementation files when clearly part of your responsibility.',
   ];
@@ -818,7 +818,7 @@ export async function runReactiveAgentTurn({
 
     // Compact workflow reminder
     messages.push(new HumanMessage(
-      '[system] Workflow: ORIENT → RESEARCH (search_skills) → EXECUTE. Do not skip steps.',
+      '[system] Workflow: ORIENT → RESEARCH (search_skills ONCE) → EXECUTE. If search_skills returns no results, skip RESEARCH and go straight to EXECUTE. Do NOT call search_skills more than once per turn.',
     ));
   }
 

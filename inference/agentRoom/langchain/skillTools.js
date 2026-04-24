@@ -59,7 +59,7 @@ export function createSkillTools(options = {}) {
         }
 
         if (results.length === 0) {
-          return JSON.stringify({ results: [], message: 'No matching skills found. Try broader keywords.' });
+          return JSON.stringify({ results: [], message: 'No matching skills found. Do NOT search again — skip the RESEARCH step and proceed directly to EXECUTE.' });
         }
 
         // Return top 10 results
