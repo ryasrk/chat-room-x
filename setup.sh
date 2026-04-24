@@ -27,6 +27,17 @@ else
     echo "  ✓ Node: $(node --version)"
 fi
 
+# Python3 + venv required for Agent Room workspace sandboxing
+if command -v python3 &>/dev/null; then
+    echo "  ✓ Python: $(python3 --version 2>&1)"
+    if ! python3 -m venv --help &>/dev/null; then
+        echo "  ⚠ python3-venv not found. Installing..."
+        sudo apt-get install -y python3-venv 2>/dev/null || echo "  ⚠ Could not install python3-venv. Agent Room may fail. Run: sudo apt install python3-venv"
+    fi
+else
+    echo "  ⚠ python3 not found. Agent Room requires Python 3. Run: sudo apt install python3 python3-venv"
+fi
+
 # ── 2. Install dependencies ────────────────────────────────────────
 echo "[2/3] Installing dependencies..."
 

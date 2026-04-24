@@ -84,42 +84,54 @@ export async function ensureWorkspacePythonEnv(workspaceRoot) {
 
   let lastError = null;
   const candidates = getPythonCandidates();
+
+  // Try each candidate with two strategies:
+  //   1. Full venv (with pip)
+  //   2. Minimal venv (--without-pip) — works even without python3-venv package
   for (const candidate of candidates) {
-    try {
-      console.log(`[workspace] Trying venv creation with: ${candidate} (cwd: ${workspaceRoot})`);
-      const result = await execFileResult(candidate, ['-m', 'venv', DEFAULT_VENV_DIR], {
-        cwd: workspaceRoot,
-        timeout: VENV_CREATION_TIMEOUT_MS,
-      });
+    for (const venvArgs of [
+      ['-m', 'venv', DEFAULT_VENV_DIR],
+      ['-m', 'venv', '--without-pip', DEFAULT_VENV_DIR],
+    ]) {
+      try {
+        const label = venvArgs.includes('--without-pip') ? `${candidate} --without-pip` : candidate;
+        console.log(`[workspace] Trying venv creation with: ${label} (cwd: ${workspaceRoot})`);
+        const result = await execFileResult(candidate, venvArgs, {
+          cwd: workspaceRoot,
+          timeout: VENV_CREATION_TIMEOUT_MS,
+        });
 
-      if (result.error) {
-        const msg = result.stderr || result.error.message || `Failed to create venv with ${candidate}`;
-        console.warn(`[workspace] ${candidate} failed: ${msg}`);
-        lastError = new Error(msg);
-        continue;
+        if (result.error) {
+          const msg = result.stderr || result.stdout || result.error.message || `Failed to create venv with ${label}`;
+          console.warn(`[workspace] ${label} failed: ${msg}`);
+          lastError = new Error(msg);
+          continue;
+        }
+
+        if (!existsSync(pythonBinary)) {
+          console.warn(`[workspace] ${label} ran but ${DEFAULT_VENV_DIR}/bin/python not found`);
+          lastError = new Error(`Virtual environment was created without ${DEFAULT_VENV_DIR}/bin/python`);
+          continue;
+        }
+
+        console.log(`[workspace] venv created successfully with ${label}`);
+        return {
+          created: true,
+          pythonBinary,
+          venvPath: DEFAULT_VENV_DIR,
+        };
+      } catch (error) {
+        console.warn(`[workspace] ${candidate} not available: ${error.message}`);
+        lastError = error;
+        break; // If the binary itself isn't found, skip --without-pip too
       }
-
-      if (!existsSync(pythonBinary)) {
-        console.warn(`[workspace] ${candidate} ran but ${DEFAULT_VENV_DIR}/bin/python not found`);
-        lastError = new Error(`Virtual environment was created without ${DEFAULT_VENV_DIR}/bin/python`);
-        continue;
-      }
-
-      console.log(`[workspace] venv created successfully with ${candidate}`);
-      return {
-        created: true,
-        pythonBinary,
-        venvPath: DEFAULT_VENV_DIR,
-      };
-    } catch (error) {
-      console.warn(`[workspace] ${candidate} not available: ${error.message}`);
-      lastError = error;
     }
   }
 
   throw new Error(
     `Unable to create Python venv (tried: ${candidates.join(', ')}). ` +
-    `Last error: ${lastError?.message || 'unknown'}`,
+    `Last error: ${lastError?.message || 'unknown'}. ` +
+    `Fix: sudo apt install python3-venv`,
   );
 }
 
