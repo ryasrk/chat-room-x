@@ -30,6 +30,14 @@ CONTROL_PORT="${CONTROL_PORT:-18247}"
 DASHBOARD_PORT="${DASHBOARD_PORT:-7391}"
 export CONTROL_PORT DASHBOARD_PORT
 
+# ── Resolve JS runtime (bun preferred, node fallback) ──────────
+[[ -d "$HOME/.bun/bin" ]] && export PATH="$HOME/.bun/bin:$PATH"
+if command -v bun &>/dev/null; then
+    JS_RUNTIME="bun"
+else
+    JS_RUNTIME="node"
+fi
+
 # ── Colors ──────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -142,7 +150,8 @@ echo -e "${CYAN}═══ Chat Room X + Ngrok ═══${NC}"
 echo ""
 echo -e "Starting cloud inference manager..."
 echo -e "  Provider: ${GREEN}${ENOWXAI_BASE_URL:-not set}${NC}"
-bun inference/manager.js enowxai &
+echo -e "  Runtime:  ${CYAN}${JS_RUNTIME}${NC}"
+$JS_RUNTIME inference/manager.js enowxai &
 MANAGER_PID=$!
 
 # Wait for manager to be ready (max 10s — cloud starts instantly)

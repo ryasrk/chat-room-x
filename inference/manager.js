@@ -1,7 +1,7 @@
 /**
  * Tenrary-X Cloud Inference Manager
  * Cloud-only variant — all inference routed to cloud providers (no local llama-server).
- * Exposes a control API on :3002 and proxies inference to cloud provider endpoints.
+ * Exposes a control API on :18247 and proxies inference to cloud provider endpoints.
  */
 
 import './loadEnv.js';
