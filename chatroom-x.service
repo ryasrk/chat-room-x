@@ -1,0 +1,25 @@
+[Unit]
+Description=Chat Room X - Cloud Inference Manager + Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# __WORKING_DIR__ is replaced by setup.sh during install
+WorkingDirectory=__WORKING_DIR__
+ExecStart=__WORKING_DIR__/run_all.sh
+ExecStop=__WORKING_DIR__/run_all.sh stop
+EnvironmentFile=__WORKING_DIR__/.env
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=chatroom-x
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=__WORKING_DIR__
+
+[Install]
+WantedBy=multi-user.target

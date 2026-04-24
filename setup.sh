@@ -2,10 +2,94 @@
 # ── Chat Room X: Setup ───────────────────────────────────────────────
 # Cloud-only variant — installs Node/Bun dependencies only.
 # No local inference engines, no model downloads, no CUDA builds.
+#
+# Usage:
+#   ./setup.sh                    # Full setup (deps + env)
+#   ./setup.sh service install    # Install systemd service
+#   ./setup.sh service uninstall  # Remove systemd service
+#   ./setup.sh service status     # Check service status
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+
+SERVICE_NAME="chatroom-x"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+
+# ── Service management ──────────────────────────────────────────────
+service_install() {
+    echo "═══════════════════════════════════════════════════════════"
+    echo "  Chat Room X: Install Service"
+    echo "═══════════════════════════════════════════════════════════"
+    echo ""
+    echo "  Project path: ${SCRIPT_DIR}"
+    echo "  Service file: ${SERVICE_FILE}"
+    echo ""
+
+    if [[ ! -f "${SCRIPT_DIR}/chatroom-x.service" ]]; then
+        echo "  ✗ chatroom-x.service template not found in ${SCRIPT_DIR}"
+        exit 1
+    fi
+
+    # Generate service file with actual path substituted
+    sed "s|__WORKING_DIR__|${SCRIPT_DIR}|g" \
+        "${SCRIPT_DIR}/chatroom-x.service" | sudo tee "${SERVICE_FILE}" > /dev/null
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable "${SERVICE_NAME}"
+    echo ""
+    echo "  ✓ Service installed and enabled"
+    echo ""
+    echo "  Commands:"
+    echo "    sudo systemctl start  ${SERVICE_NAME}   # Start"
+    echo "    sudo systemctl stop   ${SERVICE_NAME}   # Stop"
+    echo "    sudo systemctl status ${SERVICE_NAME}   # Status"
+    echo "    journalctl -u ${SERVICE_NAME} -f        # Logs"
+    echo ""
+}
+
+service_uninstall() {
+    echo "═══════════════════════════════════════════════════════════"
+    echo "  Chat Room X: Uninstall Service"
+    echo "═══════════════════════════════════════════════════════════"
+    echo ""
+
+    if [[ -f "${SERVICE_FILE}" ]]; then
+        sudo systemctl stop "${SERVICE_NAME}" 2>/dev/null || true
+        sudo systemctl disable "${SERVICE_NAME}" 2>/dev/null || true
+        sudo rm -f "${SERVICE_FILE}"
+        sudo systemctl daemon-reload
+        echo "  ✓ Service removed"
+    else
+        echo "  ⚠ Service not installed (${SERVICE_FILE} not found)"
+    fi
+    echo ""
+}
+
+service_status() {
+    if [[ -f "${SERVICE_FILE}" ]]; then
+        echo "  Service file: ${SERVICE_FILE}"
+        echo "  Working dir:  $(grep 'WorkingDirectory=' "${SERVICE_FILE}" | cut -d= -f2)"
+        echo ""
+        sudo systemctl status "${SERVICE_NAME}" --no-pager 2>/dev/null || true
+    else
+        echo "  ⚠ Service not installed"
+    fi
+}
+
+# ── Handle "service" subcommand ─────────────────────────────────────
+if [[ "${1:-}" == "service" ]]; then
+    case "${2:-}" in
+        install)   service_install   ;;
+        uninstall) service_uninstall ;;
+        status)    service_status    ;;
+        *)
+            echo "Usage: $0 service [install|uninstall|status]"
+            exit 1
+            ;;
+    esac
+    exit 0
+fi
 
 echo "═══════════════════════════════════════════════════════════"
 echo "  Chat Room X: Setup"
@@ -83,4 +167,8 @@ echo ""
 echo "Next steps:"
 echo "  1. Edit .env with your cloud API keys"
 echo "  2. Run: ./run_all.sh"
+echo ""
+echo "Optional — install as systemd service:"
+echo "  ./setup.sh service install    # Auto-detects this directory"
+echo "  sudo systemctl start ${SERVICE_NAME}"
 echo ""
