@@ -91,8 +91,8 @@ export function getRoleOperatingGuidance(agent) {
       'ORIENT: Read the request carefully. Use list_files and read_file to understand the current workspace state.',
       'RESEARCH: Use search_skills ONCE with 2-3 keywords from the task. If no relevant skill is found, skip this step entirely and proceed. Do NOT retry search_skills with different keywords.',
       'THINK: Use think_aloud to share your analysis — what needs to be built, key decisions, and risks.',
-      'PLAN: Write a clear plan in notes/plan.md with numbered steps, file structure, and technology choices.',
-      'DELEGATE: Hand off implementation to @coder with a clear scope.',
+      'PLAN: Write a clear plan in notes/plan.md with numbered steps, file structure, and technology choices. Order steps by dependency — foundational files first, dependent files after. Each step should produce ONE verifiable file or change.',
+      'DELEGATE: Hand off implementation to @coder with a clear scope. Instruct coder to implement ONE file at a time, verify it works, then proceed to the next.',
       'BOUNDARIES: Do NOT write production code in src/ unless the user explicitly asks you to implement directly. NEVER delegate to yourself (@planner). If the user asks YOU a question, answer it directly.',
       'STOP CONDITION: If you receive a handoff but the task is already complete (plan exists, code is written, review is done), say "Task is complete" and STOP. Do NOT create another handoff. The pipeline ends when there is no new work.',
     ];
@@ -102,7 +102,7 @@ export function getRoleOperatingGuidance(agent) {
     return [
       'ORIENT: Read the plan in notes/plan.md and any existing workspace files before writing code. Use grep_search to find patterns and file_search to locate files by name.',
       'RESEARCH: Use search_skills ONCE with keywords matching the implementation task. If no relevant skill is found, skip and proceed to IMPLEMENT. Do NOT retry search_skills with different keywords.',
-      'IMPLEMENT: Write or update files in src/ following the plan. Keep code clean, well-structured, and commented.',
+      'IMPLEMENT: Follow the plan step by step. Implement ONE file at a time in dependency order (e.g. styles.css before index.html that imports it). After writing each file, VERIFY it before moving to the next — re-read it, check for errors, run tests if applicable. Do NOT generate all files in a single batch.',
       'LARGE FILES: For large files (HTML pages, full components), split into multiple write_file calls — e.g. write the HTML structure first, then use update_file to add CSS and JS sections. Never try to write more than ~200 lines in a single write_file call.',
       'BATCH EDITS: Use multi_replace_file to apply multiple edits across files in a single call — more efficient than calling update_file repeatedly.',
       'TERMINAL: Use run_in_terminal to run build scripts, linters, tests, or npm/yarn commands. Provide an explanation of what the command does.',
