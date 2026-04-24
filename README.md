@@ -64,9 +64,8 @@ cp .env.example .env
 | `ENOWXAI_BASE_URL` | ✅ | EnowxAI gateway URL |
 | `ENOWXAI_API_KEY` | ✅ | EnowxAI API key |
 | `ENOWXAI_MODEL` | ✅ | Default model (e.g. `gemini-2.5-flash`) |
-| `ENOWXAI_ROUTER_MODEL` | ✅ | XA router model (e.g. `gemini-2.5-flash`) |
-| `ENOWXAI_BRAIN_MODEL` | ❌ | Brain agent model override (default: `gpt-5.4`) |
-| `ENOWXAI_WORKER_MODEL` | ❌ | Worker agent model override |
+| `ENOWXAI_BRAIN_MODEL` | ❌ | Planner model (default: `gpt-5.4`) |
+| `ENOWXAI_WORKER_MODEL` | ❌ | Coder/Reviewer model override |
 | `NGROK_AUTHTOKEN` | ❌ | For remote access via ngrok |
 | `NGROK_DOMAIN` | ❌ | Static ngrok domain |
 

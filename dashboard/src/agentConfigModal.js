@@ -171,77 +171,6 @@ function collectRoomProviderConfig(panel) {
   return config;
 }
 
-// ── Router Config (xa) ─────────────────────────────────────────
-
-function updateRouterProviderFields(panel, provider) {
-  if (!panel) return;
-  const baseUrlGroup = panel.querySelector('#router-base-url-group');
-  const apiKeyGroup = panel.querySelector('#router-api-key-group');
-  const modelGroup = panel.querySelector('#router-model-group');
-  const maxTokensGroup = panel.querySelector('#router-max-tokens-group');
-  const baseUrlInput = panel.querySelector('#router-base-url-input');
-  const modelInput = panel.querySelector('#router-model-input');
-  const maxTokensInput = panel.querySelector('#router-max-tokens-input');
-
-  // Hide all first
-  if (baseUrlGroup) baseUrlGroup.style.display = 'none';
-  if (apiKeyGroup) apiKeyGroup.style.display = 'none';
-  if (modelGroup) modelGroup.style.display = 'none';
-  if (maxTokensGroup) maxTokensGroup.style.display = 'none';
-
-  if (!provider) return;
-
-  // Show relevant fields
-  if (modelGroup) modelGroup.style.display = '';
-  if (maxTokensGroup) maxTokensGroup.style.display = '';
-
-  if (provider === 'custom') {
-    if (baseUrlGroup) baseUrlGroup.style.display = '';
-    if (apiKeyGroup) apiKeyGroup.style.display = '';
-  } else if (provider === 'enowxai' || provider === 'openai') {
-    if (apiKeyGroup) apiKeyGroup.style.display = '';
-    if (provider === 'enowxai') {
-      if (modelInput) modelInput.placeholder = 'gemini-3.1-flash-lite';
-    }
-  }
-}
-
-function collectRouterConfig(panel) {
-  const provider = panel?.querySelector('#router-provider-input')?.value || '';
-  if (!provider) return {};
-
-  const config = { provider };
-  const baseUrl = panel.querySelector('#router-base-url-input')?.value.trim();
-  const apiKey = panel.querySelector('#router-api-key-input')?.value.trim();
-  const model = panel.querySelector('#router-model-input')?.value.trim();
-  const maxTokens = panel.querySelector('#router-max-tokens-input')?.value;
-
-  if (baseUrl) config.base_url = baseUrl;
-  if (apiKey) config.api_key = apiKey;
-  if (model) config.model = model;
-  if (maxTokens && !isNaN(maxTokens)) config.max_tokens = parseInt(maxTokens, 10);
-  config.temperature = 0.1; // Router always uses low temperature
-
-  return config;
-}
-
-function populateRouterConfig(panel, routerConfig) {
-  if (!panel || !routerConfig) return;
-  const providerInput = panel.querySelector('#router-provider-input');
-  const baseUrlInput = panel.querySelector('#router-base-url-input');
-  const apiKeyInput = panel.querySelector('#router-api-key-input');
-  const modelInput = panel.querySelector('#router-model-input');
-  const maxTokensInput = panel.querySelector('#router-max-tokens-input');
-
-  if (providerInput) providerInput.value = routerConfig.provider || '';
-  if (baseUrlInput) baseUrlInput.value = routerConfig.base_url || '';
-  if (apiKeyInput) apiKeyInput.value = routerConfig.api_key || '';
-  if (modelInput) modelInput.value = routerConfig.model || '';
-  if (maxTokensInput) maxTokensInput.value = routerConfig.max_tokens || '';
-
-  updateRouterProviderFields(panel, routerConfig.provider || '');
-}
-
 // ── Tab Switching ──────────────────────────────────────────────
 
 function initAgentConfigTabs(panel) {
@@ -256,14 +185,6 @@ function initAgentConfigTabs(panel) {
       panels.forEach((p) => p.classList.toggle('active', p.dataset.tabPanel === target));
     });
   });
-
-  // Router provider change handler
-  const routerProviderInput = panel.querySelector('#router-provider-input');
-  if (routerProviderInput) {
-    routerProviderInput.addEventListener('change', () => {
-      updateRouterProviderFields(panel, routerProviderInput.value);
-    });
-  }
 }
 
 let _tabsInitialized = false;
@@ -331,8 +252,6 @@ export async function openAgentConfigModal(mode = 'add', agent = null, renderAge
       if (modelText) modelText.value = pc.model;
     }
 
-    // Populate router config (xa)
-    populateRouterConfig(panel, agent.router_config || {});
   } else {
     title.textContent = 'Add AI Bot';
     originalNameInput.value = '';
@@ -341,8 +260,6 @@ export async function openAgentConfigModal(mode = 'add', agent = null, renderAge
     submitBtn.textContent = 'Add Bot';
     if (providerInput) providerInput.value = 'tier';
     updateRoomProviderFields(panel, 'tier');
-    // Reset router config
-    populateRouterConfig(panel, {});
   }
 
   // Initialize tabs once, reset to first tab on every open
@@ -373,8 +290,7 @@ function getAgentConfigFormData() {
   const tools = Array.from(panel?.querySelectorAll('input[name="agent-tool"]:checked') || [])
     .map((cb) => cb.value);
   const provider_config = collectRoomProviderConfig(panel);
-  const router_config = collectRouterConfig(panel);
-  return { name, role, model_tier, system_prompt, tools, provider_config, router_config };
+  return { name, role, model_tier, system_prompt, tools, provider_config, router_config: {} };
 }
 
 /**

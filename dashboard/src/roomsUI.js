@@ -386,8 +386,7 @@ export function createRoomsView() {
           <!-- Tab navigation -->
           <div class="agent-config-tabs">
             <button type="button" class="agent-config-tab active" data-tab="identity">Identity</button>
-            <button type="button" class="agent-config-tab" data-tab="provider">Model (xb)</button>
-            <button type="button" class="agent-config-tab" data-tab="router">Router (xa)</button>
+            <button type="button" class="agent-config-tab" data-tab="provider">Model</button>
           </div>
 
           <!-- Tab: Identity -->
@@ -416,11 +415,11 @@ export function createRoomsView() {
               </div>
           </div>
 
-          <!-- Tab: Model (xb) — deep work model for ReAct tool loop -->
+          <!-- Tab: Model — deep work model for ReAct tool loop -->
           <div class="agent-config-tab-panel" data-tab-panel="provider">
               <input type="hidden" id="agent-tier-input" value="worker" />
               <p class="form-hint" style="margin-bottom:8px">
-                The deep-work model (xb) handles tool calling, code generation, and complex reasoning.
+                The model used for tool calling, code generation, and complex reasoning.
               </p>
               <div class="form-group">
                 <label for="agent-provider-input">Provider</label>
@@ -458,39 +457,7 @@ export function createRoomsView() {
               </div>
           </div>
 
-          <!-- Tab: Router (xa) — cloud fast model for classification & routing -->
-          <div class="agent-config-tab-panel" data-tab-panel="router">
-              <p class="form-hint" style="margin-bottom:8px">
-                The router model (xa) handles message classification and routing via cloud.
-                Leave empty to skip xa and always use the main model (xb).
-              </p>
-              <div class="form-group">
-                <label for="router-provider-input">Router Provider</label>
-                <select id="router-provider-input">
-                  <option value="" selected>Disabled (no router)</option>
-                  <option value="enowxai">EnowxAI (Gateway)</option>
-                  <option value="openai">OpenAI</option>
-                  <option value="custom">Custom (OpenAI-compatible)</option>
-                </select>
-                <small class="form-hint">Fast cloud model for routing decisions (e.g. gemini-2.5-flash).</small>
-              </div>
-              <div class="form-group" id="router-base-url-group" style="display:none">
-                <label for="router-base-url-input">Base URL</label>
-                <input type="url" id="router-base-url-input" placeholder="https://your-endpoint.com" />
-              </div>
-              <div class="form-group" id="router-api-key-group" style="display:none">
-                <label for="router-api-key-input">API Key</label>
-                <input type="password" id="router-api-key-input" placeholder="sk-..." autocomplete="off" />
-              </div>
-              <div class="form-group" id="router-model-group" style="display:none">
-                <label for="router-model-input">Model Name</label>
-                <input type="text" id="router-model-input" placeholder="gemini-2.5-flash" maxlength="200" />
-              </div>
-              <div class="form-group" id="router-max-tokens-group" style="display:none">
-                <label for="router-max-tokens-input">Max Tokens</label>
-                <input type="number" id="router-max-tokens-input" min="64" max="4096" step="64" placeholder="512" />
-              </div>
-          </div>
+          <!-- Router tab removed — no XA classification, all messages go to deep-work directly -->
 
           <div class="modal-actions">
             <button type="button" class="btn-secondary" id="agent-config-cancel">Cancel</button>

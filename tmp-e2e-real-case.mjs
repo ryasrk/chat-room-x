@@ -106,12 +106,13 @@ async function run() {
   roomId = createRes.data?.room?.id || '';
   assert(roomId.length > 0, `Room ID: ${roomId.slice(0, 8)}...`);
 
-  // Verify agents have router_config
+  // Verify agents follow pipeline (planner → coder → reviewer)
   const agentsRes = await api(`/api/agent-rooms/${roomId}/agents`);
   const agents = agentsRes.data?.agents || [];
   console.log(`  Agents: ${agents.map(a => a.name).join(', ')}`);
-  const agentsWithRouter = agents.filter(a => a.router_config && Object.keys(a.router_config).length > 0);
-  assert(agentsWithRouter.length === agents.length, `All ${agents.length} agents have router_config`);
+  assert(agents.some(a => a.name === 'planner'), 'Has planner agent');
+  assert(agents.some(a => a.name === 'coder'), 'Has coder agent');
+  assert(agents.some(a => a.name === 'reviewer'), 'Has reviewer agent');
 
   // ── 3. CHAT Path — Greeting ───────────────────────────────
   console.log('\n3. CHAT Path — Greeting');

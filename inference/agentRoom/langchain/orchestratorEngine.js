@@ -17,7 +17,7 @@ import {
 } from '../../db/database.js';
 import { listFiles } from '../fileTools.js';
 import { broadcastAgentRoomEvent } from '../wsBridge.js';
-import { runReactiveAgentTurn, runSimpleAgentTurn, runProgressCheckTurn, shouldAgentRespond, isSimpleQuery, classifyWithRouter } from './reactiveAgent.js';
+import { runReactiveAgentTurn, shouldAgentRespond } from './reactiveAgent.js';
 import { startXbTask, updateXbStep, recordXbToolCall, completeXbTask, failXbTask, cleanupXbTasks } from '../progressStore.js';
 
 const DEFAULT_AUTONOMY_LEVEL = 2;
@@ -572,254 +572,65 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
       const roomSkills = listRoomSkills(roomId);
       const allowedSkillIds = roomSkills.map((s) => s.skill_id);
 
-      // ── xa Router Classification ──────────────────────────────
-      // Use the xa (router) model to classify: CHAT → fast-path, PROGRESS → report, DELEGATE → full ReAct.
-      // Falls back to JS heuristic if no router_config is set.
-      const classification = await classifyWithRouter(agent, triggerContent, roomId);
-      const useSimplePath = classification === 'chat';
-      const useProgressPath = classification === 'progress';
-
-      // Log the classification path
-      const pathLabel = useProgressPath ? 'Progress check' : useSimplePath ? 'Simple query fast-path' : 'Started work on a room task';
-      saveAgentRoomLog(roomId, agent.name, 'info', pathLabel, {
+      // ── Direct deep-work execution (no XA classification) ─────
+      // Every message goes straight to the deep-work model.
+      // Pipeline: Planner → Coder → Reviewer → Ask User
+      saveAgentRoomLog(roomId, agent.name, 'info', 'Started work on a room task', {
         source: 'room_message',
-        classification,
-        fast_path: useSimplePath || useProgressPath,
+        classification: 'delegate',
+        fast_path: false,
       });
       this.emitRoomEvent(roomId, 'agent_room:log', {
         log: {
           agent_name: agent.name,
           level: 'info',
-          message: pathLabel,
+          message: 'Started work on a room task',
           created_at: nowUnix(),
-          meta: { source: 'room_message', classification, fast_path: useSimplePath || useProgressPath },
+          meta: { source: 'room_message', classification: 'delegate', fast_path: false },
         },
       });
 
-      let result;
-      if (useProgressPath) {
-        // xa reports xb's progress — no xb invocation needed
-        result = await runProgressCheckTurn({
-          agent,
-          roomContext: { roomId, roomName: room.name, agents },
-          input,
-          conversationHistory: messages,
-        });
-      } else if (useSimplePath) {
-        // xa handles directly — no xb invocation needed
-        result = await runSimpleAgentTurn({
-          agent,
-          roomContext: { roomId, roomName: room.name, agents },
-          input,
-          conversationHistory: messages,
-        });
-      } else {
-        // ── Fire-and-forget xb with progress tracking ────────
-        const hasRouterModel = agent.router_config && Object.keys(agent.router_config).length > 0;
+      // 1. Send immediate acknowledgment
+      const ackMessage = this.postAgentMessage(roomId, agent.name, '⏳ On it, give me a moment...', 'message');
+      if (ackMessage) postedMessages.push(ackMessage);
 
-        // 1. xa sends immediate acknowledgment
-        if (hasRouterModel) {
-          try {
-            const ackResult = await runSimpleAgentTurn({
-              agent,
-              roomContext: { roomId, roomName: room.name, agents },
-              input: `The user asked: "${triggerContent}"\nYou are delegating this to the deep-work model which will handle it. Send a brief, honest acknowledgment (1 sentence max). Be clear you're about to work on it, NOT that you've already done it. Examples: "Let me look into that.", "On it, give me a moment.", "I'll work on that now." Do NOT describe what you'll do in detail. Do NOT pretend you've already completed the task.\nIMPORTANT: Reply in the same language the user used. If they wrote in Indonesian, reply in Indonesian (e.g. "Aku kerjain sekarang ya.", "Siap, bentar ya.").`,
-              conversationHistory: messages.slice(-2),
-            });
-            const ackMessage = this.postAgentMessage(roomId, agent.name, ackResult.message || '⏳ On it, give me a moment...', 'message');
-            if (ackMessage) postedMessages.push(ackMessage);
-          } catch (_ackErr) {
-            const ackMessage = this.postAgentMessage(roomId, agent.name, '⏳ On it, give me a moment...', 'message');
-            if (ackMessage) postedMessages.push(ackMessage);
-          }
-        } else {
-          // No router model configured — send static fallback ack
-          const ackMessage = this.postAgentMessage(roomId, agent.name, '⏳ On it, give me a moment...', 'message');
-          if (ackMessage) postedMessages.push(ackMessage);
-        }
+      // 2. Start progress tracking
+      startXbTask(roomId, agent.name, 'Analyzing request...');
 
-        // 2. Start progress tracking
-        startXbTask(roomId, agent.name, 'Analyzing request...');
-
-        // 3. Fire xb asynchronously — don't await, let it run in background
-        const xbRoomContext = {
-          roomId,
-          roomName: room.name,
-          roomDescription: room.description,
-          workspacePath: room.workspace_path,
-          workspaceListing,
-          privateMemory,
-          agents,
-          allowedSkillIds: allowedSkillIds.length > 0 ? allowedSkillIds : null,
-          spawnAgent: async ({ name, role, system_prompt, model_tier, tools }) => {
-            const templateAgent = agents.find((a) => a.model_tier === model_tier) || agents[0];
-            const providerConfig = templateAgent?.provider_config || {};
-            const routerConfig = templateAgent?.router_config || {};
-            createAgentRoomAgent(roomId, name, role, model_tier, system_prompt, tools, providerConfig, routerConfig);
-            this.emitRoomEvent(roomId, 'agent_room:agent_spawned', {
-              agent_name: name,
-              role,
-              model_tier,
-              tools,
-              spawned_by: agent.name,
-              timestamp: nowUnix(),
-            });
-          },
-        };
-
-        // Fire-and-forget: xb runs in background, posts its own results
-        this._runXbBackground(roomId, agent, xbRoomContext, input, messages).catch((err) => {
-          console.error(`[${agent.name}] xb background failed:`, err.message);
-        });
-
-        // Return immediately — xa already sent ack, xb will post when done
-        return {
-          agentName: agent.name.toLowerCase(),
-          handoffs: [],
-          postedMessages,
-        };
-      }
-
-      const actionErrors = [];
-      const fileArtifacts = [];
-      const toolProgress = [];
-
-      for (const toolResult of result.toolResults) {
-        const progressEntry = {
-          tool: toolResult.tool,
-          path: toolResult.params?.path || null,
-          status: toolResult.error ? 'error' : 'success',
-          timestamp: nowUnix(),
-        };
-        toolProgress.push(progressEntry);
-
-        if (toolResult.error) {
-          const sanitizedError = 'Tool execution failed';
-          actionErrors.push({
-            tool: toolResult.tool,
-            message: sanitizedError,
-            path: toolResult.params?.path || null,
-          });
-          saveAgentRoomLog(roomId, agent.name, 'error', `Failed ${toolResult.tool}`, {
-            tool: toolResult.tool,
-            path: toolResult.params?.path || null,
-            error: sanitizedError,
-          });
-          this.emitRoomEvent(roomId, 'agent_room:log', {
-            log: {
-              agent_name: agent.name,
-              level: 'error',
-              message: `Failed ${toolResult.tool}`,
-              created_at: nowUnix(),
-              meta: {
-                tool: toolResult.tool,
-                path: toolResult.params?.path || null,
-                error: sanitizedError,
-              },
-            },
-          });
-          continue;
-        }
-
-        const logMeta = buildToolLogMeta(toolResult);
-        saveAgentRoomLog(roomId, agent.name, 'info', `Executed ${toolResult.tool}`, logMeta);
-        this.emitRoomEvent(roomId, 'agent_room:log', {
-          log: {
-            agent_name: agent.name,
-            level: 'info',
-            message: `Executed ${toolResult.tool}`,
-            created_at: nowUnix(),
-            meta: logMeta,
-          },
-        });
-
-        // Emit skill usage events to room chat
-        if (SKILL_TOOL_NAMES.has(toolResult.tool)) {
-          this.emitRoomEvent(roomId, 'agent_room:skill_used', {
-            agent_name: agent.name,
-            tool: toolResult.tool,
-            meta: logMeta,
+      // 3. Fire deep-work asynchronously — don't await, let it run in background
+      const xbRoomContext = {
+        roomId,
+        roomName: room.name,
+        roomDescription: room.description,
+        workspacePath: room.workspace_path,
+        workspaceListing,
+        privateMemory,
+        agents,
+        allowedSkillIds: allowedSkillIds.length > 0 ? allowedSkillIds : null,
+        spawnAgent: async ({ name, role, system_prompt, model_tier, tools }) => {
+          const templateAgent = agents.find((a) => a.model_tier === model_tier) || agents[0];
+          const providerConfig = templateAgent?.provider_config || {};
+          createAgentRoomAgent(roomId, name, role, model_tier, system_prompt, tools, providerConfig, {});
+          this.emitRoomEvent(roomId, 'agent_room:agent_spawned', {
+            agent_name: name,
+            role,
+            model_tier,
+            tools,
+            spawned_by: agent.name,
             timestamp: nowUnix(),
           });
-        }
+        },
+      };
 
-        if ((toolResult.tool === 'write_file' || toolResult.tool === 'update_file') && toolResult.params?.path) {
-          fileArtifacts.push({
-            path: toolResult.params.path,
-            tool: toolResult.tool,
-            agent_name: agent.name,
-            size: logMeta.input_bytes || 0,
-          });
-          this.emitRoomEvent(roomId, 'agent_room:file_changed', {
-            agent_name: agent.name,
-            path: toolResult.params.path,
-            tool: toolResult.tool,
-          });
-        }
-      }
-
-      // Emit progress summary for this agent turn
-      if (toolProgress.length > 0) {
-        this.emitRoomEvent(roomId, 'agent_room:progress', {
-          agent_name: agent.name,
-          tools: toolProgress,
-          artifacts: fileArtifacts,
-          timestamp: nowUnix(),
-        });
-      }
-
-      // Track token usage
-      if (result.usage && result.usage.total_tokens > 0) {
-        saveAgentRoomTokenUsage(roomId, agent.name, result.usage, result.usage.model || '', result.usage.provider || '');
-        this.emitRoomEvent(roomId, 'agent_room:token_usage', {
-          agent_name: agent.name,
-          usage: result.usage,
-          timestamp: nowUnix(),
-        });
-      }
-
-      const finalMessage = this.postAgentMessage(roomId, agent.name, result.message, 'message', { artifacts: fileArtifacts });
-      if (finalMessage) postedMessages.push(finalMessage);
-
-      const missingHandoffMessages = getMissingHandoffMessages({
-        senderName: agent.name,
-        postedMessages,
-        handoffs: result.handoffs,
-        agents,
-      });
-      for (const handoffMessage of missingHandoffMessages) {
-        const postedHandoff = this.postAgentMessage(roomId, handoffMessage.sender_name, handoffMessage.content, 'handoff');
-        if (postedHandoff) {
-          postedMessages.push(postedHandoff);
-        }
-      }
-
-      saveAgentRoomMemory(roomId, agent.name, result.privateMemory);
-
-      updateAgentRoomAgentStatus(roomId, agent.name, 'idle');
-      this.emitRoomEvent(roomId, 'agent_room:agent_status', {
-        agent_name: agent.name,
-        status: 'idle',
-      });
-      // Emit confidence score
-      if (typeof result.confidence === 'number') {
-        this.emitRoomEvent(roomId, 'agent_room:confidence', {
-          agent_name: agent.name,
-          confidence: result.confidence,
-          timestamp: nowUnix(),
-        });
-      }
-
-      this.emitRoomEvent(roomId, 'agent_room:agent_done', {
-        agent_name: agent.name,
-        handoffs: result.handoffs,
-        action_errors: actionErrors,
-        confidence: result.confidence,
+      // Fire-and-forget: deep-work runs in background, posts its own results
+      this._runXbBackground(roomId, agent, xbRoomContext, input, messages).catch((err) => {
+        console.error(`[${agent.name}] deep-work background failed:`, err.message);
       });
 
+      // Return immediately — ack already sent, deep-work will post when done
       return {
         agentName: agent.name.toLowerCase(),
-        handoffs: result.handoffs,
+        handoffs: [],
         postedMessages,
       };
     } catch (error) {
