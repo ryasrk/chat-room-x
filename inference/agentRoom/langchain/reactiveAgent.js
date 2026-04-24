@@ -838,6 +838,8 @@ export async function runReactiveAgentTurn({
   const seenResponseSignatures = new Set();
   let explicitToolRetryCount = 0;
   let postToolRetryCount = 0;
+  let truncationContinueCount = 0;
+  const MAX_TRUNCATION_CONTINUES = 3;
 
   // ── Tool Result Cache ───────────────────────────────────────
   // Cache read-only tool results within this turn to avoid redundant LLM calls.
@@ -901,20 +903,24 @@ export async function runReactiveAgentTurn({
 
       // ── Auto-continue on max_tokens truncation ──────────────
       const finishReason = result.additional_kwargs?.finishReason;
-      if (finishReason === 'length') {
+      if (finishReason === 'length' && truncationContinueCount < MAX_TRUNCATION_CONTINUES) {
+        truncationContinueCount += 1;
         // Response was cut off by max_tokens — push partial result and ask to continue
         messages.push(result);
         messages.push(new HumanMessage(
-          '[system] Your response was cut off because it hit the output token limit. '
+          `[system] Your response was cut off because it hit the output token limit (continuation ${truncationContinueCount}/${MAX_TRUNCATION_CONTINUES}). `
           + 'Continue EXACTLY where you left off. Do NOT repeat what you already wrote. '
           + 'If you were in the middle of a tool call, complete just that tool call. '
           + 'If you were writing a file, use update_file to append the remaining content instead of rewriting the whole file.',
         ));
-        console.log(`[${agent.name}] Auto-continuing: response truncated by max_tokens (iteration ${iteration + 1})`);
+        console.log(`[${agent.name}] Auto-continuing: response truncated by max_tokens (iteration ${iteration + 1}, continue ${truncationContinueCount}/${MAX_TRUNCATION_CONTINUES})`);
         if (onThinking) {
-          onThinking(agent.name, `Continuing (output was truncated)...`);
+          onThinking(agent.name, `Continuing (truncated ${truncationContinueCount}/${MAX_TRUNCATION_CONTINUES})...`);
         }
         continue;
+      } else if (finishReason === 'length') {
+        // Exhausted continuation budget — treat partial content as final
+        console.log(`[${agent.name}] Max truncation continues reached (${MAX_TRUNCATION_CONTINUES}), treating partial response as final`);
       }
 
       const content = normalizeResponseContent(result.content);
