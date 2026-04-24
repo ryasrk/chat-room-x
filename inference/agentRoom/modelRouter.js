@@ -55,7 +55,7 @@ const MODEL_ROUTES = {
     baseURL: ENOWXAI_BASE_URL,
     model: ENOWXAI_MODEL,
     apiKey: ENOWXAI_API_KEY,
-    maxTokens: 4096,
+    maxTokens: 8192,
     temperature: 0.2,
     label: 'Worker (cloud provider)',
   },
@@ -479,6 +479,7 @@ function parseAnthropicResponse(data) {
       completion_tokens: json.usage?.output_tokens || 0,
       total_tokens: (json.usage?.input_tokens || 0) + (json.usage?.output_tokens || 0),
     },
+    finishReason: json.stop_reason === 'max_tokens' ? 'length' : (json.stop_reason || 'stop'),
   };
 }
 
@@ -650,12 +651,19 @@ export async function chatCompletionWithConfig(providerConfig, tier, messages, o
   const url = new URL(apiPath, resolved.baseURL);
 
   return new Promise((resolve, reject) => {
+    // Support abort signal for cancellation
+    const abortSignal = options.signal;
+    if (abortSignal?.aborted) {
+      reject(new Error('Request aborted'));
+      return;
+    }
+
     const reqFn = url.protocol === 'https:' ? httpsRequest : httpRequest;
 
     const req = reqFn(url, {
       method: 'POST',
       headers,
-      timeout: 120_000,
+      timeout: 180_000,
     }, (res) => {
       let data = '';
       res.on('data', chunk => { data += chunk; });
@@ -666,20 +674,23 @@ export async function chatCompletionWithConfig(providerConfig, tier, messages, o
             return;
           }
 
-          let content, model, usage;
+          let content, model, usage, finishReason;
           let toolCalls = [];
           if (resolved.format === 'anthropic') {
             const parsed = parseAnthropicResponse(data);
             content = parsed.content;
             model = parsed.model;
             usage = parsed.usage;
+            finishReason = parsed.finishReason;
           } else {
             const json = JSON.parse(data);
-            const message = json.choices?.[0]?.message || {};
+            const choice = json.choices?.[0] || {};
+            const message = choice.message || {};
             content = message.content || '';
             model = json.model || resolved.model;
             usage = json.usage || {};
             toolCalls = parseOpenAIToolCalls(message);
+            finishReason = choice.finish_reason || 'stop';
           }
 
           resolve({
@@ -689,6 +700,7 @@ export async function chatCompletionWithConfig(providerConfig, tier, messages, o
             provider: providerConfig?.provider || 'tier',
             usage,
             toolCalls,
+            finishReason,
           });
         } catch (err) {
           reject(new Error(`Failed to parse model response: ${err.message}`));
@@ -696,7 +708,20 @@ export async function chatCompletionWithConfig(providerConfig, tier, messages, o
       });
     });
 
-    req.on('error', reject);
+    // Wire up abort signal to destroy the request
+    if (abortSignal) {
+      const onAbort = () => {
+        req.destroy();
+        reject(new Error('Request aborted'));
+      };
+      abortSignal.addEventListener('abort', onAbort, { once: true });
+      req.on('close', () => abortSignal.removeEventListener('abort', onAbort));
+    }
+
+    req.on('error', (err) => {
+      if (err.message === 'Request aborted') return; // Already handled
+      reject(err);
+    });
     req.on('timeout', () => {
       req.destroy();
       reject(new Error(`Model request timed out (provider: ${providerConfig?.provider || tier})`));

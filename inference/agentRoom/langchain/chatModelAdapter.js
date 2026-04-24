@@ -114,6 +114,7 @@ export class AgentRoomChatModel extends BaseChatModel {
         systemPrompt: this.systemPrompt,
         maxTokens: options?.maxTokens,
         temperature: options?.temperature,
+        signal: options?.signal,
         ...(Array.isArray(this._boundTools) && this._boundTools.length > 0
           ? {
               tools: normalizeBoundTools(this._boundTools),
@@ -131,6 +132,7 @@ export class AgentRoomChatModel extends BaseChatModel {
         tier: result.tier,
         provider: result.provider,
         usage: result.usage,
+        finishReason: result.finishReason || 'stop',
       },
     });
 

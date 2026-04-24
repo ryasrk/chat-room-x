@@ -91,6 +91,7 @@ export function getRoleOperatingGuidance(agent) {
       'ORIENT: Read the plan in notes/plan.md and any existing workspace files before writing code.',
       'RESEARCH: Use search_skills ONCE with keywords matching the implementation task (e.g., "frontend CSS", "API endpoint", "form validation"). If no relevant skill is found, skip and proceed to IMPLEMENT. Do NOT retry search_skills with different keywords.',
       'IMPLEMENT: Write or update files in src/ following the plan. Keep code clean, well-structured, and commented.',
+      'LARGE FILES: For large files (HTML pages, full components), split into multiple write_file calls — e.g. write the HTML structure first, then use update_file to add CSS and JS sections. Never try to write more than ~200 lines in a single write_file call.',
       'VERIFY: After writing, re-read your files to check for obvious errors or missing pieces.',
       'HANDOFF: When implementation is complete, delegate to @reviewer for quality check.',
       'BOUNDARIES: Do NOT write review notes or plans. Do NOT hand work off to yourself.',
@@ -165,6 +166,10 @@ function buildReactiveSystemPrompt(agent, roomContext) {
     agent.system_prompt || `You are ${agent.name}.`,
     `\nRoom: ${roomContext.roomName}${roomContext.roomDescription ? ` — ${roomContext.roomDescription}` : ''}`,
     `Team: ${agentList}`,
+    `\nResource Limits:`,
+    `- Max tool iterations per turn: ${MAX_TOOL_ITERATIONS} (you can call up to ${MAX_TOOL_ITERATIONS} tools before your turn ends)`,
+    `- Max output tokens per response: ~8192 tokens (~6000 words). If your response is cut off mid-sentence, the system will automatically ask you to continue.`,
+    `- Plan your work to fit within these limits. For large tasks, break them into smaller tool calls rather than one massive output.`,
     `\nWorkflow:\n${roleGuidance}`,
     '\nRules: Be concise. Use @agent to delegate. Read before writing. Only claim work you actually did with tools. NEVER mention your own @name — you cannot delegate to yourself.',
     '\nLanguage: ALWAYS reply in the same language the user used. If the user writes in Indonesian, reply in Indonesian. If in English, reply in English.',
@@ -659,6 +664,7 @@ export async function runReactiveAgentTurn({
   conversationHistory,
   postMessage,
   onToolUse,
+  onThinking,
   signal,
 }) {
   // Build tools
@@ -854,15 +860,29 @@ export async function runReactiveAgentTurn({
 
       let result;
       try {
-        result = await (nativeToolCallingEnabled ? nativeModel : baseModel).invoke(messages);
+        if (onThinking) {
+          onThinking(agent.name, iteration === 0 ? 'Thinking...' : `Thinking (step ${iteration + 1})...`);
+        }
+        const invokeOpts = signal ? { signal } : undefined;
+        result = await (nativeToolCallingEnabled ? nativeModel : baseModel).invoke(messages, invokeOpts);
       } catch (error) {
+        if (signal?.aborted) {
+          return {
+            message: '⏹ Work was stopped by the user.',
+            handoffs: [],
+            toolResults,
+            privateMemory: '',
+            confidence: 0,
+            usage: usageAccumulator,
+          };
+        }
         if (!nativeToolCallingEnabled || !shouldFallbackToTextTools(error, toolCallingMode)) {
           throw error;
         }
 
         nativeToolCallingEnabled = false;
         messages.push(new HumanMessage('[system] Native tool calling is unavailable for this provider. Use the documented JSON tool blocks for the rest of this turn.'));
-        result = await baseModel.invoke(messages);
+        result = await baseModel.invoke(messages, signal ? { signal } : undefined);
       }
 
       // Accumulate token usage from this LLM call
@@ -877,6 +897,24 @@ export async function runReactiveAgentTurn({
       }
       if (!usageAccumulator.provider && result.additional_kwargs?.provider) {
         usageAccumulator.provider = result.additional_kwargs.provider;
+      }
+
+      // ── Auto-continue on max_tokens truncation ──────────────
+      const finishReason = result.additional_kwargs?.finishReason;
+      if (finishReason === 'length') {
+        // Response was cut off by max_tokens — push partial result and ask to continue
+        messages.push(result);
+        messages.push(new HumanMessage(
+          '[system] Your response was cut off because it hit the output token limit. '
+          + 'Continue EXACTLY where you left off. Do NOT repeat what you already wrote. '
+          + 'If you were in the middle of a tool call, complete just that tool call. '
+          + 'If you were writing a file, use update_file to append the remaining content instead of rewriting the whole file.',
+        ));
+        console.log(`[${agent.name}] Auto-continuing: response truncated by max_tokens (iteration ${iteration + 1})`);
+        if (onThinking) {
+          onThinking(agent.name, `Continuing (output was truncated)...`);
+        }
+        continue;
       }
 
       const content = normalizeResponseContent(result.content);

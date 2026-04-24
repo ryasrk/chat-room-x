@@ -770,6 +770,14 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
             timestamp: nowUnix(),
           });
         },
+        onThinking: (agentName, step) => {
+          updateXbStep(roomId, agentName, step);
+          this.emitRoomEvent(roomId, 'agent_room:xb_progress', {
+            agent_name: agentName,
+            step,
+            timestamp: nowUnix(),
+          });
+        },
       });
 
       // ── Process tool results ──────────────────────────────
