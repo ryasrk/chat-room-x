@@ -340,12 +340,14 @@ function checkInferenceHealth() {
 function attachWebSocketBridge(server) {
   server.on('upgrade', (req, socket, head) => {
     const url = new URL(req.url, `http://localhost:${CONTROL_PORT}`);
+    console.log(`[ws-upgrade] pathname="${url.pathname}" from=${req.headers.origin || 'no-origin'}`);
     if (url.pathname === '/ws/agent-room') {
       handleAgentRoomUpgrade(req, socket, head);
       return;
     }
 
     if (url.pathname !== '/ws/chat') {
+      console.warn(`[ws-upgrade] Rejected unknown path: ${url.pathname}`);
       socket.destroy();
       return;
     }

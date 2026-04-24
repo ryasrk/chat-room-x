@@ -169,12 +169,14 @@ export function handleAgentRoomUpgrade(req, socket, head) {
   const origin = req.headers.origin || '';
 
   if (!roomId || !token) {
+    console.warn(`[agent-room-ws] Rejected: missing ${!roomId ? 'room_id' : 'token'} (origin: ${origin || 'none'})`);
     socket.write('HTTP/1.1 400 Bad Request\r\n\r\n');
     socket.destroy();
     return false;
   }
 
   if (!isAllowedDashboardOrigin(origin)) {
+    console.warn(`[agent-room-ws] Rejected: origin not allowed: "${origin}" (allowed: ${DASHBOARD_ORIGIN || 'fallback-regex'})`);
     socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
     socket.destroy();
     return false;
@@ -182,6 +184,7 @@ export function handleAgentRoomUpgrade(req, socket, head) {
 
   const payload = verifyAccessToken(token);
   if (!payload) {
+    console.warn(`[agent-room-ws] Rejected: invalid/expired token for room ${roomId}`);
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();
     return false;
@@ -189,6 +192,7 @@ export function handleAgentRoomUpgrade(req, socket, head) {
 
   const user = findUserById(payload.sub);
   if (!user) {
+    console.warn(`[agent-room-ws] Rejected: user not found (sub: ${payload.sub}) for room ${roomId}`);
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();
     return false;
@@ -196,11 +200,13 @@ export function handleAgentRoomUpgrade(req, socket, head) {
 
   const room = getAgentRoom(roomId);
   if (!room || !canAccessAgentRoom(room, user.id)) {
+    console.warn(`[agent-room-ws] Rejected: room ${roomId} not found or access denied for user ${user.username}`);
     socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
     socket.destroy();
     return false;
   }
 
+  console.log(`[agent-room-ws] Upgrade OK: user=${user.username} room=${roomId}`);
   agentRoomWss.handleUpgrade(req, socket, head, (ws) => {
     agentRoomWss.emit('connection', ws, req, { user, roomId });
   });
