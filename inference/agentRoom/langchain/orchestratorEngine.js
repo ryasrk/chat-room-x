@@ -148,10 +148,13 @@ export function getMissingHandoffMessages({ senderName, postedMessages, handoffs
       continue;
     }
 
+    // Extract a meaningful context snippet from the handoff message
+    // instead of using a generic template that loses all context.
+    const contextSnippet = content.length > 300 ? content.slice(0, 300) + '...' : content;
     missingMessages.push({
       sender_type: 'agent',
       sender_name: senderName,
-      content: `@${agentName} Continue the delegated room task from @${senderName}. Use the latest user request, room context, and workspace files relevant to your role.`,
+      content: `@${agentName} ${contextSnippet}`,
       event_type: 'handoff',
       created_at: nowUnix(),
     });
@@ -204,6 +207,24 @@ function detectReviewVerdict(message) {
   return null;
 }
 
+// Detect if a message signals task completion (no further work needed)
+const COMPLETION_SIGNAL_PATTERNS = [
+  /\btask is complete\b/i, /\bno changes needed\b/i,
+  /\bimplementation complete\b/i, /\balready reviewed\b/i,
+  /\balready approved\b/i, /\bnothing (new |else )?to (do|implement|review|plan)\b/i,
+  /\bpipeline (ends?|complete|done)\b/i, /\bno (new )?work\b/i,
+  /\btetap siaga\b/i, /\btidak ada (perubahan|implementasi|pekerjaan)\b/i,
+  /\bsudah (selesai|disetujui|diapprove)\b/i,
+  /\bmy task .* is complete\b/i, /\bno .* for me to (do|perform)\b/i,
+  /\btidak perlu .* saat ini\b/i, /\bjangan ubah file\b/i,
+  /\bno diff\b/i, /\bno .* changes? .* to (review|make)\b/i,
+];
+
+function isCompletionSignal(content) {
+  const text = String(content || '');
+  return COMPLETION_SIGNAL_PATTERNS.some((p) => p.test(text));
+}
+
 export function selectReactingAgents({ agents, triggerMessage, roomConfig, responseCounts = new Map() }) {
   const mentionedAgentNames = getMentionedAgentNames(agents, triggerMessage.content);
   const targetAgentNames = triggerMessage.event_type === 'handoff'
@@ -212,6 +233,13 @@ export function selectReactingAgents({ agents, triggerMessage, roomConfig, respo
   const triggerSender = String(triggerMessage.sender_name || '').toLowerCase();
 
   if (!allowsReactiveFollowUp(triggerMessage)) {
+    return [];
+  }
+
+  // LOOP PROTECTION: If the trigger message signals completion, don't react.
+  // This prevents agents from bouncing "no work to do" messages back and forth.
+  if (triggerMessage.sender_type === 'agent' && isCompletionSignal(triggerMessage.content)) {
+    console.log(`[orchestrator] Skipping reaction to completion signal from @${triggerSender}`);
     return [];
   }
 
@@ -793,12 +821,30 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
       // ── Re-inject handoffs into the room queue ────────────
       // If xb produced handoffs, they need to trigger the next wave.
       // We re-enter processTriggerQueue with the handoff messages as the initial trigger.
+      //
+      // LOOP PROTECTION: Detect completion signals and skip re-injection
+      // when the agent indicates the task is done.
+      const completionPatterns = [
+        /\btask is complete\b/i, /\bno changes needed\b/i,
+        /\bimplementation complete\b/i, /\balready reviewed\b/i,
+        /\balready approved\b/i, /\bnothing (new |else )?to (do|implement|review|plan)\b/i,
+        /\bpipeline (ends?|complete|done)\b/i, /\bno (new )?work\b/i,
+        /\btetap siaga\b/i, /\btidak ada (perubahan|implementasi|pekerjaan)\b/i,
+        /\bsudah (selesai|disetujui|diapprove)\b/i,
+      ];
+      const finalContent = String(result.message || '').toLowerCase();
+      const isCompletionSignal = completionPatterns.some((p) => p.test(finalContent));
+
       const handoffMessages = bgPostedMessages.filter((m) => m.event_type === 'handoff');
-      if (handoffMessages.length > 0) {
+      if (handoffMessages.length > 0 && !isCompletionSignal) {
         console.log(`[${agent.name}] xb produced ${handoffMessages.length} handoffs, re-injecting...`);
-        this.processTriggerQueue(roomId, handoffMessages[0]).catch((err) => {
+        this.enqueueRoomTask(roomId, async () => {
+          await this.processTriggerQueue(roomId, handoffMessages[0]);
+        }).catch((err) => {
           console.error(`[${agent.name}] xb handoff re-injection failed:`, err.message);
         });
+      } else if (handoffMessages.length > 0 && isCompletionSignal) {
+        console.log(`[${agent.name}] xb produced handoffs but agent signaled completion — skipping re-injection to prevent loop`);
       }
     } catch (error) {
       failXbTask(roomId, agent.name, error.message);

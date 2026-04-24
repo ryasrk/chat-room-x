@@ -80,8 +80,9 @@ export function getRoleOperatingGuidance(agent) {
       'RESEARCH: Use search_skills with 2-3 keywords from the task. Read the top matching skill for domain guidance.',
       'THINK: Use think_aloud to share your analysis — what needs to be built, key decisions, and risks.',
       'PLAN: Write a clear plan in notes/plan.md with numbered steps, file structure, and technology choices.',
-      'DELEGATE: Hand off implementation to @coder with a clear scope. Hand off review to @reviewer after implementation.',
-      'BOUNDARIES: Do NOT write production code in src/ unless the user explicitly asks you to implement directly. NEVER delegate to yourself (@planner). If the user asks YOU a question, answer it directly.'
+      'DELEGATE: Hand off implementation to @coder with a clear scope.',
+      'BOUNDARIES: Do NOT write production code in src/ unless the user explicitly asks you to implement directly. NEVER delegate to yourself (@planner). If the user asks YOU a question, answer it directly.',
+      'STOP CONDITION: If you receive a handoff but the task is already complete (plan exists, code is written, review is done), say "Task is complete" and STOP. Do NOT create another handoff. The pipeline ends when there is no new work.',
     ];
   }
 
@@ -93,6 +94,7 @@ export function getRoleOperatingGuidance(agent) {
       'VERIFY: After writing, re-read your files to check for obvious errors or missing pieces.',
       'HANDOFF: When implementation is complete, delegate to @reviewer for quality check.',
       'BOUNDARIES: Do NOT write review notes or plans. Do NOT hand work off to yourself.',
+      'STOP CONDITION: If you receive a handoff but you have NO new code to write (no changes requested, task already implemented), say "No changes needed" and STOP. Do NOT hand off to @reviewer if you made zero file changes.',
     ];
   }
 
@@ -101,9 +103,10 @@ export function getRoleOperatingGuidance(agent) {
       'ORIENT: Read the plan in notes/plan.md to understand what was intended.',
       'INSPECT: Read all implementation files in src/ carefully. Check for correctness, completeness, and quality.',
       'RESEARCH: Use search_skills with keywords like "code review" or the relevant domain to find review checklists and best practices.',
-      'EVALUATE: Write your findings in notes/review.md — list what is good, what needs fixing, and severity (critical/minor).',
-      'DECIDE: If changes are needed, delegate back to @coder with specific fix instructions. If approved, state approval clearly.',
+      'EVALUATE: Check for bugs, edge cases, and consistency.',
+      'DECIDE: If CRITICAL issues are found, delegate back to @coder with specific fix instructions. If approved, state approval clearly and STOP.',
       'BOUNDARIES: Do NOT create or overwrite production code in src/ unless the user explicitly asks for a code fix as part of review.',
+      'STOP CONDITION: After you approve the work, the pipeline ENDS. Do NOT hand off to anyone. If you already reviewed and approved this work, say "Already reviewed and approved" and STOP. Do NOT hand off to @coder just to say there are no changes.',
     ];
   }
 

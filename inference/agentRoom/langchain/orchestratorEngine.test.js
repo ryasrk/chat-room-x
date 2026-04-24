@@ -235,3 +235,54 @@ test('getMissingHandoffMessages skips targets already covered by an explicit han
 
   assert.deepEqual(missing, []);
 });
+
+test('selectReactingAgents blocks reaction to completion signals from agents', () => {
+  const completionMessages = [
+    'Task is complete. No further work needed.',
+    'No changes needed — implementation is already done.',
+    'Already reviewed and approved. Pipeline ends here.',
+    'Tidak ada perubahan yang perlu dilakukan saat ini.',
+    'Sudah selesai dan disetujui oleh reviewer.',
+    'Tetap siaga, tidak ada implementasi lanjutan.',
+  ];
+
+  for (const content of completionMessages) {
+    const selected = selectReactingAgents({
+      agents,
+      triggerMessage: {
+        sender_type: 'agent',
+        sender_name: 'coder',
+        content: `@reviewer ${content}`,
+        event_type: 'handoff',
+      },
+      roomConfig: {
+        mode: 'reactive',
+        maxCycles: 9,
+        maxAgentsPerCycle: 4,
+        maxTurnsPerAgent: 2,
+      },
+    });
+
+    assert.deepEqual(selected, [], `Should block reaction to: "${content.slice(0, 50)}..."`);
+  }
+});
+
+test('selectReactingAgents allows reaction to non-completion agent messages', () => {
+  const selected = selectReactingAgents({
+    agents,
+    triggerMessage: {
+      sender_type: 'agent',
+      sender_name: 'planner',
+      content: '@coder Please implement the calculator based on notes/plan.md.',
+      event_type: 'handoff',
+    },
+    roomConfig: {
+      mode: 'reactive',
+      maxCycles: 9,
+      maxAgentsPerCycle: 4,
+      maxTurnsPerAgent: 2,
+    },
+  });
+
+  assert.deepEqual(selected.map(({ agent }) => agent.name), ['coder']);
+});
