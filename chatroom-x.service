@@ -5,21 +5,20 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-# __WORKING_DIR__ is replaced by setup.sh during install
+# __WORKING_DIR__ and __RUN_USER__ are replaced by setup.sh during install
+User=__RUN_USER__
+Group=__RUN_USER__
 WorkingDirectory=__WORKING_DIR__
 ExecStart=__WORKING_DIR__/run_all.sh
 ExecStop=__WORKING_DIR__/run_all.sh stop
 EnvironmentFile=__WORKING_DIR__/.env
+Environment=HOME=__USER_HOME__
+Environment=PATH=__USER_HOME__/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=chatroom-x
-
-# Security hardening
-NoNewPrivileges=true
-ProtectSystem=strict
-ReadWritePaths=__WORKING_DIR__
 
 [Install]
 WantedBy=multi-user.target

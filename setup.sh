@@ -31,8 +31,18 @@ service_install() {
         exit 1
     fi
 
-    # Generate service file with actual path substituted
-    sed "s|__WORKING_DIR__|${SCRIPT_DIR}|g" \
+    # Detect the user who owns the project directory (not root)
+    RUN_USER="$(stat -c '%U' "${SCRIPT_DIR}")"
+    USER_HOME="$(eval echo "~${RUN_USER}")"
+
+    echo "  Run as user: ${RUN_USER}"
+    echo "  User home:   ${USER_HOME}"
+    echo ""
+
+    # Generate service file with actual values substituted
+    sed -e "s|__WORKING_DIR__|${SCRIPT_DIR}|g" \
+        -e "s|__RUN_USER__|${RUN_USER}|g" \
+        -e "s|__USER_HOME__|${USER_HOME}|g" \
         "${SCRIPT_DIR}/chatroom-x.service" | sudo tee "${SERVICE_FILE}" > /dev/null
 
     sudo systemctl daemon-reload
