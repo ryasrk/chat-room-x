@@ -1,4 +1,4 @@
-const base = 'http://localhost:3002';
+const base = 'http://localhost:18247';
 const username = 'ryasrk';
 const password = 'Ryas4321';
 const prompt = '@planner plan and build a simple calculator, hand off implementation and review, use tools as needed, and summarize what you created.';

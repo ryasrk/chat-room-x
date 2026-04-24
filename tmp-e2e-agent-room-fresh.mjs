@@ -1,4 +1,4 @@
-const base = 'http://localhost:3002';
+const base = 'http://localhost:18247';
 const username = 'ryasrk';
 const password = 'Ryas4321';
 const roomName = `E2E Calculator ${Date.now()}`;
@@ -118,7 +118,7 @@ async function main() {
   }
 
   console.log(JSON.stringify({
-    url: 'http://localhost:3000',
+    url: 'http://localhost:7391',
     projectRoomId,
     agentRoomId,
     roomName,

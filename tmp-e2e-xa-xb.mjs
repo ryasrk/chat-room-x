@@ -6,10 +6,10 @@
  * 2. PROGRESS — xa reports xb status
  * 3. DELEGATE — xa acks, xb fires async
  *
- * Requires: server running on localhost:3002
+ * Requires: server running on localhost:18247
  */
 
-const base = 'http://localhost:3002';
+const base = 'http://localhost:18247';
 const username = 'ryasrk';
 const password = 'Ryas4321';
 const roomName = `E2E xa-xb ${Date.now()}`;

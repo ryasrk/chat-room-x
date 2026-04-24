@@ -20,7 +20,7 @@ if [[ -f ".env" ]]; then
 fi
 
 CMD="${1:-start}"
-CONTROL_PORT="${CONTROL_PORT:-3002}"
+CONTROL_PORT="${CONTROL_PORT:-18247}"
 
 # ── Colors ──────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -33,8 +33,8 @@ stop_all() {
     echo -e "${YELLOW}Stopping all services...${NC}"
     pkill -f "bun.*inference/manager\.js" 2>/dev/null && echo "  Manager stopped." || true
     pkill -f "node.*inference/manager\.js" 2>/dev/null || true
-    pkill -f "vite.*--port 3000" 2>/dev/null || true
-    lsof -ti:3000 2>/dev/null | xargs kill 2>/dev/null || true
+    pkill -f "vite.*--port 7391" 2>/dev/null || true
+    lsof -ti:7391 2>/dev/null | xargs kill 2>/dev/null || true
     echo -e "${GREEN}All services stopped.${NC}"
 }
 
@@ -53,7 +53,7 @@ case "$CMD" in
             echo -e "  Manager:   ${RED}stopped${NC}"
         fi
         if pgrep -f "vite" > /dev/null 2>&1; then
-            echo -e "  Dashboard: ${GREEN}running${NC} → http://localhost:3000"
+            echo -e "  Dashboard: ${GREEN}running${NC} → http://localhost:7391"
         else
             echo -e "  Dashboard: ${RED}stopped${NC}"
         fi
@@ -94,7 +94,7 @@ fi
 # ── Stop existing services ─────────────────────────────────────
 pkill -f "bun.*inference/manager\.js" 2>/dev/null || true
 pkill -f "node.*inference/manager\.js" 2>/dev/null || true
-lsof -ti:3000 2>/dev/null | xargs kill 2>/dev/null || true
+lsof -ti:7391 2>/dev/null | xargs kill 2>/dev/null || true
 
 sleep 1
 
@@ -126,7 +126,7 @@ fi
 # ── Start Dashboard ────────────────────────────────────────────
 echo ""
 echo "Starting dashboard..."
-(cd dashboard && npx vite --port 3000 --host) &
+(cd dashboard && npx vite --port 7391 --host) &
 DASHBOARD_PID=$!
 
 sleep 2
@@ -134,7 +134,7 @@ sleep 2
 echo ""
 echo -e "${GREEN}═══ All services running (cloud mode) ═══${NC}"
 echo ""
-echo -e "  Dashboard:  ${CYAN}http://localhost:3000${NC}"
+echo -e "  Dashboard:  ${CYAN}http://localhost:7391${NC}"
 echo -e "  Manager:    http://localhost:${CONTROL_PORT}"
 echo -e "  Provider:   ${ENOWXAI_BASE_URL}"
 echo -e "  Mode:       ${GREEN}enowxai (cloud-only)${NC}"

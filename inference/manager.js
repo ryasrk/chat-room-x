@@ -23,7 +23,7 @@ import { routeApiRequest } from './routes/apiRouter.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = path.resolve(__dirname, '..');
 
-const CONTROL_PORT = parseInt(process.env.CONTROL_PORT, 10) || 3002;
+const CONTROL_PORT = parseInt(process.env.CONTROL_PORT, 10) || 18247;
 const MAX_WS_CONNECTIONS = 32;
 const MAX_WS_PER_IP = 4;
 const MAX_STREAM_BUFFER_SIZE = 64 * 1024;
@@ -76,10 +76,10 @@ function getDashboardOrigins() {
     );
   } else {
     origins.push(
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001',
+      'http://localhost:7391',
+      'http://localhost:7392',
+      'http://127.0.0.1:7391',
+      'http://127.0.0.1:7392',
     );
   }
 
@@ -97,7 +97,7 @@ function getCorsOrigin(requestOrigin) {
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
     return requestOrigin;
   }
-  return allowedOrigins[0] || 'http://localhost:3000';
+  return allowedOrigins[0] || 'http://localhost:7391';
 }
 let activeWebSocketConnections = 0;
 // Cloud providers handle concurrency — generous parallel slots

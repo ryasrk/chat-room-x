@@ -9,8 +9,8 @@
 # Environment (.env):
 #   NGROK_AUTHTOKEN=xxx                 # Required: ngrok auth token
 #   NGROK_DOMAIN=xxx.ngrok-free.dev     # Required: ngrok static domain
-#   DASHBOARD_PORT=3000                 # Dashboard port (default: 3000)
-#   CONTROL_PORT=3002                   # Manager API port
+#   DASHBOARD_PORT=7391                 # Dashboard port (default: 7391)
+#   CONTROL_PORT=18247                  # Manager API port
 
 set -euo pipefail
 
@@ -26,8 +26,8 @@ if [[ -f ".env" ]]; then
 fi
 
 CMD="${1:-start}"
-CONTROL_PORT="${CONTROL_PORT:-3002}"
-DASHBOARD_PORT="${DASHBOARD_PORT:-3000}"
+CONTROL_PORT="${CONTROL_PORT:-18247}"
+DASHBOARD_PORT="${DASHBOARD_PORT:-7391}"
 export CONTROL_PORT DASHBOARD_PORT
 
 # ── Colors ──────────────────────────────────────────────────────

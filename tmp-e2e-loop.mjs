@@ -3,7 +3,7 @@
  * Tests consistency of xa/xb classification and self-mention stripping
  */
 
-const base = 'http://localhost:3002';
+const base = 'http://localhost:18247';
 const username = 'ryasrk';
 const password = 'Ryas4321';
 

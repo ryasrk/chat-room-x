@@ -7,12 +7,12 @@ through cloud providers (EnowxAI gateway, OpenAI, Anthropic).
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Dashboard (Vite + React)  :3000                    │
+│  Dashboard (Vite + React)  :7391                    │
 │  ├── Chat interface                                 │
 │  ├── Agent Room monitor                             │
 │  └── Provider status                                │
 ├─────────────────────────────────────────────────────┤
-│  Inference Manager (Bun)   :3002                    │
+│  Inference Manager (Bun)   :18247                   │
 │  ├── Cloud provider routing (EnowxAI/OpenAI/etc)    │
 │  ├── Request caching (Redis + in-memory)            │
 │  └── Agent Room (LangChain)                         │
@@ -79,13 +79,13 @@ chat-room-x/
 ├── setup.sh                  # Install deps (no engines)
 ├── .env                      # Cloud provider config
 ├── inference/
-│   ├── manager.js            # Cloud inference manager (:3002)
+│   ├── manager.js            # Cloud inference manager (:18247)
 │   ├── package.json
 │   └── agentRoom/
 │       ├── defaultAgents.js  # 4 agents with XA/XB cloud configs
 │       ├── modelRouter.js    # Cloud provider routing
 │       └── langchain/        # LangChain adapter
-├── dashboard/                # Vite + React UI (:3000)
+├── dashboard/                # Vite + React UI (:7391)
 ├── config/                   # (empty — no local configs needed)
 └── docs/
 ```

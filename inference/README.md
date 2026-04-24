@@ -5,7 +5,7 @@ Cloud-only inference manager — routes all LLM calls to cloud providers.
 ## Architecture
 
 ```
-[Dashboard :3000] → [Manager :3002] → [Cloud Provider API]
+[Dashboard :7391] → [Manager :18247] → [Cloud Provider API]
                          ↓
                     Agent Room (LangChain)
                     ├── XA: gemini-2.5-flash (router/classifier)
@@ -24,20 +24,20 @@ npm start
 
 ## API
 
-Manager control API on `:3002`:
+Manager control API on `:18247`:
 
 ```bash
 # Health check
-curl http://localhost:3002/health
+curl http://localhost:18247/health
 
 # Status
-curl http://localhost:3002/status
+curl http://localhost:18247/status
 
 # Switch provider
-curl -X POST 'http://localhost:3002/switch?mode=enowxai'
+curl -X POST 'http://localhost:18247/switch?mode=enowxai'
 
 # Chat completion (proxied to cloud)
-curl http://localhost:3002/v1/chat/completions \
+curl http://localhost:18247/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"Hello!"}], "max_tokens": 256}'
 ```

@@ -72,8 +72,8 @@ function cspPlugin() {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const dashboardPort = env.DASHBOARD_PORT || process.env.DASHBOARD_PORT || '3000'
-  const controlPort = env.CONTROL_PORT || process.env.CONTROL_PORT || '3002'
+  const dashboardPort = env.DASHBOARD_PORT || process.env.DASHBOARD_PORT || '7391'
+  const controlPort = env.CONTROL_PORT || process.env.CONTROL_PORT || '18247'
 
   // Build allowedHosts from NGROK_DOMAIN if set (supports ngrok tunneling)
   const ngrokDomain = env.NGROK_DOMAIN || process.env.NGROK_DOMAIN || ''
