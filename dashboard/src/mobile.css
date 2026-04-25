@@ -1083,28 +1083,36 @@
     white-space: nowrap;
   }
 
-  /* ── Workspace Body: single column, no gaps ── */
+  /* ── Workspace Body: single column, scrollable ── */
   .workspace-body {
-    grid-template-columns: 1fr;
+    display: flex !important;
+    flex-direction: column;
     gap: 0;
     padding: 0;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* ── File Sidebar: compact, limited height ── */
+  /* ── File Sidebar: natural height, scrolls with body ── */
   .workspace-sidebar {
-    max-height: 35vh;
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
     border-bottom: 1px solid var(--border);
     padding: 4px;
-    scrollbar-width: thin;
+    flex-shrink: 0;
   }
 
+  /* Accordion: ensure open state shows content */
   .sidebar-accordion {
     border-radius: 10px;
+    overflow: visible;
+  }
+
+  .sidebar-accordion[open] {
+    overflow: visible;
   }
 
   .sidebar-accordion-header {
@@ -1115,6 +1123,15 @@
 
   .sidebar-accordion-body {
     padding: 0 4px 4px;
+    overflow: visible;
+    max-height: none;
+  }
+
+  /* Limit file list height so it doesn't push preview off-screen */
+  .workspace-file-list {
+    max-height: 40vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sidebar-search-input {
@@ -1903,7 +1920,11 @@
   }
 
   .workspace-sidebar {
-    max-height: 30vh;
+    max-height: none;
+  }
+
+  .workspace-file-list {
+    max-height: 35vh;
   }
 
   /* Modal: full screen on small phones */
