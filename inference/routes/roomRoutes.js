@@ -109,7 +109,7 @@ export async function handleRoomRoute(path, url, req, res) {
         return true;
       }
 
-      const result = joinRoomByInvite(invite_code.trim(), userId);
+      const result = joinRoomByInvite(invite_code.trim().toLowerCase(), userId);
       if (result.error && !result.room) {
         sendJson(res, 404, { error: result.error });
         return true;

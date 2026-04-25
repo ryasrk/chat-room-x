@@ -7,7 +7,7 @@ import {
   getProjectAgentRoomDetails, sendAgentRoomMessage, cancelAgentRoom, sendRoomMessage, getAccessToken,
 } from './authClient.js';
 import { isAuthenticated, getCurrentUser } from './authClient.js';
-import { showToast } from './utils.js';
+import { showToast, copyToClipboard } from './utils.js';
 import { showConfirm } from './confirmModal.js';
 
 import { rs, escapeHtml, sanitizeClassToken } from './roomsUtils.js';
@@ -643,8 +643,9 @@ export function initRoomsUI() {
     if (!rs.currentRoomId) return;
     try {
       const data = await getRoom(rs.currentRoomId);
-      await navigator.clipboard.writeText(data.room.invite_code);
-      showToast('Invite code copied!', 'success');
+      const code = data.room.invite_code;
+      await copyToClipboard(code);
+      showToast(`Invite code copied: ${code}`, 'success');
     } catch {
       showToast('Failed to copy invite code', 'error');
     }
@@ -1026,6 +1027,18 @@ export async function openRoomChat(roomId) {
   if (roomAiBtn) roomAiBtn.hidden = true;
   if (messagesEl) messagesEl.innerHTML = '<div class="room-msg room-msg-system">Loading room…</div>';
 
+  // Hide agent-only UI elements for team rooms
+  const overflowBtn = rs.panel?.querySelector('#room-overflow-btn');
+  const connectionState = rs.panel?.querySelector('#room-connection-state');
+  const artifactsBtn = rs.panel?.querySelector('#room-artifacts-btn');
+  const downloadBtn = rs.panel?.querySelector('#room-download-btn');
+  const stopBtn = rs.panel?.querySelector('#room-stop-btn');
+  if (overflowBtn) overflowBtn.hidden = true;
+  if (connectionState) connectionState.hidden = true;
+  if (artifactsBtn) artifactsBtn.hidden = true;
+  if (downloadBtn) downloadBtn.hidden = true;
+  if (stopBtn) stopBtn.hidden = true;
+
   try {
     const data = await getRoom(roomId);
     const nameEl = rs.panel?.querySelector('#room-chat-name');
@@ -1080,6 +1093,10 @@ export async function openAgentRoomChat(projectRoomId) {
   if (roomAiPage) roomAiPage.hidden = true;
   if (roomAiBtn) roomAiBtn.hidden = false;
   if (messagesEl) messagesEl.innerHTML = '<div class="room-msg room-msg-system">Loading agent room…</div>';
+
+  // Show agent-only UI elements (may have been hidden by team room)
+  const overflowBtn = rs.panel?.querySelector('#room-overflow-btn');
+  if (overflowBtn) overflowBtn.hidden = false;
 
   try {
     const data = await getProjectAgentRoomDetails(projectRoomId);

@@ -5,7 +5,7 @@
 
 import { state } from './appState.js';
 import { renderMarkdown, stripThinking, renderThinkingBlock } from './markdownRenderer.js';
-import { escapeHtml, normalizeContent, autoResize } from './utils.js';
+import { escapeHtml, normalizeContent, autoResize, copyToClipboard } from './utils.js';
 import { updateContextBar, updateTokenInfo } from './uiUpdaters.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -173,16 +173,17 @@ export function createMessageEl(role, content, stats = null, images = [], msgDat
 
   // Code copy buttons
   div.querySelectorAll('.copy-btn, [data-copy]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const wrapper = btn.closest('.code-block-wrapper');
       const code = wrapper?.querySelector('pre code')?.textContent || wrapper?.querySelector('pre')?.textContent || '';
-      navigator.clipboard.writeText(code).then(() => {
+      try {
+        await copyToClipboard(code);
         btn.textContent = 'Copied!';
         setTimeout(() => (btn.textContent = 'Copy'), 2000);
-      }).catch(() => {
+      } catch {
         btn.textContent = 'Failed';
         setTimeout(() => (btn.textContent = 'Copy'), 2000);
-      });
+      }
     });
   });
 
@@ -205,7 +206,7 @@ export function createMessageEl(role, content, stats = null, images = [], msgDat
       const contentEl = div.querySelector('.message-content');
       const text = contentEl?.innerText || contentEl?.textContent || content;
       try {
-        await navigator.clipboard.writeText(text);
+        await copyToClipboard(text);
         copyMsgBtn.textContent = '✅';
         setTimeout(() => { copyMsgBtn.textContent = '📋 Copy'; }, 2000);
       } catch {

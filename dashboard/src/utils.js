@@ -24,6 +24,34 @@ export function showToast(message, type = 'info') {
   }, 3000);
 }
 
+/**
+ * Copy text to clipboard with fallback for non-HTTPS contexts.
+ * Uses navigator.clipboard when available, falls back to execCommand('copy').
+ */
+export async function copyToClipboard(text) {
+  // Modern Clipboard API (requires secure context)
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall through to legacy fallback
+    }
+  }
+
+  // Legacy fallback — works in HTTP and older browsers
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand('copy');
+  } finally {
+    textarea.remove();
+  }
+}
+
 export function readFileAsDataURL(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
