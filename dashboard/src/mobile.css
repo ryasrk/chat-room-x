@@ -1371,14 +1371,52 @@
     display: none; /* hide keyboard shortcut hint on mobile */
   }
 
-  /* ── Analytics ──────────────────────────────── */
+  /* ── Analytics Modal ──────────────────────────── */
+  .modal--analytics {
+    width: 100%;
+  }
+
   .analytics-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
+  }
+
+  .analytics-card {
+    padding: 10px 12px;
+  }
+
+  .analytics-card .label {
+    font-size: 10px;
   }
 
   .analytics-card .value {
     font-size: 20px;
+  }
+
+  .analytics-card .sub {
+    font-size: 11px;
+  }
+
+  /* Obs cards: 2-column on mobile */
+  .obs-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .obs-card {
+    padding: 10px 12px;
+  }
+
+  .obs-card-value {
+    font-size: 16px;
+  }
+
+  .obs-card-label {
+    font-size: 10px;
+  }
+
+  .obs-card-detail {
+    font-size: 11px;
   }
 
   /* ── Auth Page ──────────────────────────────── */

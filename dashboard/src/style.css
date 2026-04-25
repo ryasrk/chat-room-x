@@ -1229,6 +1229,10 @@ summary:focus-visible {
   width: 480px;
 }
 
+.modal--analytics {
+  width: 520px;
+}
+
 .modal-body {
   min-height: 0;
   overflow-y: auto;
