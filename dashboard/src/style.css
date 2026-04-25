@@ -4,6 +4,7 @@
 @import "auth.css";
 @import "rooms.css";
 @import "agent-room.css";
+@import "mobile.css";
 
 /* ── Reset & Base ───────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -480,11 +481,6 @@ summary:focus-visible {
   .playground-page {
     padding: 16px;
   }
-}
-
-@media (max-width: 768px) {
-  .header-nav { gap: 2px; margin-left: 8px; }
-  .nav-tab { padding: 4px 10px; font-size: 12px; }
 }
 
 @media (max-width: 768px) {
@@ -1450,62 +1446,8 @@ summary:focus-visible {
   font-size: 12px;
 }
 
-/* ── Responsive ─────────────────────────────────── */
-@media (max-width: 768px) {
-  .header { padding: 10px 14px; }
-  .header-left h1 { font-size: 16px; }
-  .badge { display: none; }
-  .header-right select { font-size: 12px; padding: 4px 8px; }
-  .chat-container { padding: 14px 10px; }
-  .input-area { padding: 10px 14px 14px; }
-  .messages { max-width: 100%; }
-  .input-wrapper {
-    max-width: 100%;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    row-gap: 10px;
-    column-gap: 10px;
-  }
-  .input-footer { max-width: 100%; }
-  .stats-bar { flex-direction: column; gap: 6px; }
-  .suggestions { flex-direction: column; max-width: 100%; }
-  .suggestion-chip { text-align: left; }
-  .context-bar { display: none; }
-  .context-label { display: none; }
-
-  .composer-tools {
-    grid-column: 1;
-    flex-wrap: wrap;
-  }
-
-  .composer-actions {
-    grid-column: 2;
-    align-self: start;
-  }
-
-  .input-wrapper textarea {
-    grid-column: 1 / -1;
-    min-height: 56px;
-  }
-
-  .export-options {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    z-index: 50;
-    width: 280px;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
-  }
-  .sidebar.collapsed {
-    width: 0;
-    box-shadow: none;
-  }
-}
+/* ── Responsive (legacy — extended by mobile.css) ── */
+/* NOTE: Comprehensive mobile rules are in mobile.css */
 
 /* ── Sidebar ────────────────────────────────────── */
 .sidebar {

@@ -1,0 +1,754 @@
+/* ══════════════════════════════════════════════════
+   MOBILE RESPONSIVE — Android / iOS / Tablet
+   Breakpoints: 480px (phone), 768px (tablet), 900px (small laptop)
+   ══════════════════════════════════════════════════ */
+
+/* ── Safe Area (notched phones) ─────────────────── */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* ── Touch-friendly defaults ────────────────────── */
+@media (pointer: coarse) {
+  /* Ensure minimum 44px touch targets on touch devices */
+  button, [role="button"], .nav-tab, .footer-btn, .sidebar-btn,
+  .conv-item, .export-option, .settings-tab {
+    min-height: 44px;
+  }
+
+  /* Show message actions always on touch (no hover) */
+  .message-actions {
+    opacity: 1 !important;
+  }
+
+  .conv-delete {
+    opacity: 0.7 !important;
+  }
+
+  .edit-msg-btn,
+  .regen-btn,
+  .pin-msg-btn,
+  .reaction-btn {
+    opacity: 0.7 !important;
+    padding: 6px 10px;
+  }
+
+  /* Larger copy button on touch */
+  .message-content pre .copy-btn {
+    opacity: 1 !important;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Prevent text selection on interactive elements */
+  .nav-tab, .sidebar-btn, .suggestion-chip, .export-option {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Disable hover effects that cause sticky states on mobile */
+  .suggestion-chip:hover {
+    transform: none;
+  }
+}
+
+/* ── Tablet (≤ 900px) ──────────────────────────── */
+@media (max-width: 900px) {
+  .header-nav {
+    gap: 2px;
+    margin-left: 8px;
+  }
+
+  .nav-tab {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .playground-page {
+    padding: 16px;
+  }
+
+  .pg-main {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── Mobile (≤ 768px) ──────────────────────────── */
+@media (max-width: 768px) {
+  /* ── App Layout ─────────────────────────────── */
+  #app {
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh; /* dynamic viewport height for mobile browsers */
+  }
+
+  html, body {
+    height: 100dvh;
+    overscroll-behavior: none; /* prevent pull-to-refresh interference */
+  }
+
+  /* ── Header ─────────────────────────────────── */
+  .header {
+    padding: 8px 12px;
+    padding-top: calc(8px + var(--safe-top));
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .header-left {
+    gap: 6px;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+
+  .header-left h1 {
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .badge {
+    display: none;
+  }
+
+  /* Nav tabs: own row, horizontally scrollable */
+  .header-nav {
+    order: 3;
+    width: 100%;
+    gap: 4px;
+    margin-left: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 4px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 2px;
+  }
+
+  .header-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tab {
+    padding: 6px 12px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  /* Header right: compact, only essential items */
+  .header-right {
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .header-right select {
+    font-size: 11px;
+    padding: 4px 6px;
+    max-width: 90px;
+  }
+
+  .header-right button {
+    padding: 4px 6px;
+    font-size: 13px;
+    min-width: 32px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Hide shortcuts button on mobile (accessible via settings) */
+  #shortcuts-btn {
+    display: none;
+  }
+
+  /* Hide context bar on mobile */
+  .context-bar,
+  .context-label {
+    display: none;
+  }
+
+  /* User menu: ensure dropdown doesn't overflow screen */
+  .user-dropdown {
+    right: -8px;
+    min-width: 180px;
+  }
+
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .user-menu-btn {
+    padding: 0;
+  }
+
+  /* ── Sidebar (mobile overlay) ───────────────── */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
+    width: 85vw;
+    max-width: 320px;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    transform: translateX(0);
+    transition: transform 0.25s ease, opacity 0.2s ease;
+    padding-top: var(--safe-top);
+  }
+
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+    width: 85vw;
+    max-width: 320px;
+    opacity: 1;
+    pointer-events: none;
+    box-shadow: none;
+  }
+
+  /* ── Chat Container ─────────────────────────── */
+  .chat-container {
+    padding: 12px 8px;
+  }
+
+  .messages {
+    max-width: 100%;
+    gap: 12px;
+  }
+
+  .message {
+    gap: 8px;
+  }
+
+  .message-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+  }
+
+  .message-content {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .message-content pre {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+
+  .message-content code {
+    font-size: 12px;
+  }
+
+  .message-content table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 12px;
+  }
+
+  .message-stats {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* ── Welcome Screen ─────────────────────────── */
+  .welcome {
+    padding: 40px 16px;
+    gap: 12px;
+  }
+
+  .welcome h2 {
+    font-size: 18px;
+  }
+
+  .welcome p {
+    font-size: 13px;
+  }
+
+  .stats-bar {
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .suggestions {
+    flex-direction: column;
+    max-width: 100%;
+    gap: 6px;
+  }
+
+  .suggestion-chip {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  /* ── Input Area ─────────────────────────────── */
+  .input-area {
+    padding: 8px 8px;
+    padding-bottom: calc(10px + var(--safe-bottom));
+  }
+
+  .input-wrapper {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .input-wrapper textarea {
+    min-height: 44px;
+    font-size: 16px; /* prevents iOS zoom on focus */
+    padding: 10px 12px 4px;
+  }
+
+  .input-toolbar {
+    padding: 4px 6px;
+  }
+
+  .input-footer {
+    max-width: 100%;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 2px;
+  }
+
+  .footer-btn {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+
+  .token-info {
+    font-size: 10px;
+  }
+
+  /* Plus menu: position above input */
+  .plus-menu {
+    min-width: 160px;
+    bottom: calc(100% + 6px);
+  }
+
+  /* ── Modals ─────────────────────────────────── */
+  .modal-overlay {
+    align-items: flex-end; /* slide up from bottom on mobile */
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100vw;
+    border-radius: var(--radius) var(--radius) 0 0;
+    max-height: 85vh;
+    max-height: 85dvh;
+    padding: 20px 16px;
+    padding-bottom: calc(20px + var(--safe-bottom));
+  }
+
+  .modal--wide {
+    width: 100%;
+  }
+
+  .modal--compact {
+    width: 100%;
+    padding: 24px 16px 20px;
+    padding-bottom: calc(20px + var(--safe-bottom));
+  }
+
+  .modal h3 {
+    font-size: 15px;
+  }
+
+  .settings-tabs {
+    gap: 1px;
+    padding: 2px;
+  }
+
+  .settings-tab {
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+
+  .setting-group label {
+    font-size: 12px;
+  }
+
+  .setting-group input[type="range"] {
+    width: 100%;
+  }
+
+  .modal-actions {
+    gap: 8px;
+  }
+
+  .modal-actions button {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  /* Export options: full width */
+  .export-options {
+    gap: 10px;
+  }
+
+  .export-option {
+    padding: 12px 14px;
+  }
+
+  /* ── Playground ─────────────────────────────── */
+  .playground-page {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .pg-header h2 {
+    font-size: 18px;
+  }
+
+  .pg-main {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .pg-card {
+    min-height: 240px;
+  }
+
+  .pg-card-header {
+    padding: 10px 14px;
+  }
+
+  .pg-card-body {
+    padding: 12px 14px;
+  }
+
+  .pg-card-footer {
+    padding: 10px 14px;
+  }
+
+  .pg-textarea {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .pg-params {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pg-param input[type="range"] {
+    width: 100%;
+  }
+
+  .pg-number-input {
+    width: 100%;
+  }
+
+  .pg-run-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pg-kbd {
+    display: none; /* hide keyboard shortcut hint on mobile */
+  }
+
+  /* ── Analytics ──────────────────────────────── */
+  .analytics-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .analytics-card .value {
+    font-size: 20px;
+  }
+
+  /* ── Auth Page ──────────────────────────────── */
+  .auth-modal {
+    width: 100%;
+    max-width: 100vw;
+    border-radius: 0;
+    padding: 24px 20px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .auth-brand h2 {
+    font-size: 20px;
+  }
+
+  .auth-form {
+    gap: 12px;
+  }
+
+  .form-group input {
+    font-size: 16px; /* prevents iOS zoom */
+    padding: 12px 14px;
+  }
+
+  .auth-submit {
+    padding: 14px;
+    font-size: 15px;
+  }
+
+  /* ── Toast ──────────────────────────────────── */
+  .toast {
+    left: 8px;
+    right: 8px;
+    bottom: calc(16px + var(--safe-bottom));
+    transform: translateY(10px);
+    width: auto;
+    text-align: center;
+  }
+
+  .toast.toast--visible {
+    transform: translateY(0);
+  }
+
+  /* ── Shortcuts Modal ────────────────────────── */
+  .shortcut-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .shortcut-item kbd {
+    font-size: 10px;
+  }
+
+  /* ── Search Bar ─────────────────────────────── */
+  .msg-search-bar {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .msg-search-bar input {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+  }
+
+  /* ── Thinking Block ─────────────────────────── */
+  .thinking-block summary {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  /* ── Code Block ─────────────────────────────── */
+  .code-block-header {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .code-block-wrapper .code-block {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  /* ── Branch Navigation ──────────────────────── */
+  .branch-nav {
+    gap: 4px;
+  }
+
+  .branch-prev,
+  .branch-next {
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+}
+
+/* ── Small Phone (≤ 480px) ─────────────────────── */
+@media (max-width: 480px) {
+  .header {
+    padding: 6px 8px;
+    padding-top: calc(6px + var(--safe-top));
+  }
+
+  .header-left h1 {
+    font-size: 13px;
+  }
+
+  #sidebar-toggle {
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 16px;
+  }
+
+  .header-right {
+    gap: 2px;
+  }
+
+  /* Hide mode select on very small phones — use mode badge or settings */
+  .header-right select {
+    max-width: 72px;
+    font-size: 10px;
+    padding: 3px 4px;
+  }
+
+  /* Hide settings button on very small phones */
+  #settings-btn {
+    display: none;
+  }
+
+  .header-right button {
+    padding: 3px 5px;
+    font-size: 12px;
+    min-width: 28px;
+    min-height: 28px;
+  }
+
+  .user-avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+
+  /* Sidebar: full width on very small screens */
+  .sidebar {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .sidebar.collapsed {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .chat-container {
+    padding: 8px 6px;
+  }
+
+  .welcome {
+    padding: 24px 12px;
+  }
+
+  .welcome-icon {
+    font-size: 24px;
+  }
+
+  .welcome h2 {
+    font-size: 16px;
+  }
+
+  .input-area {
+    padding: 6px 6px;
+    padding-bottom: calc(8px + var(--safe-bottom));
+  }
+
+  .input-wrapper textarea {
+    font-size: 16px;
+    padding: 8px 10px 4px;
+  }
+
+  .input-footer {
+    font-size: 10px;
+  }
+
+  .footer-btn {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+
+  /* Modal: full screen on small phones */
+  .modal {
+    max-height: 92vh;
+    max-height: 92dvh;
+    padding: 16px 12px;
+    padding-bottom: calc(16px + var(--safe-bottom));
+  }
+
+  .modal-actions button {
+    flex: 1;
+    text-align: center;
+  }
+
+  /* Playground */
+  .pg-header h2 {
+    font-size: 16px;
+  }
+
+  .pg-card {
+    min-height: 200px;
+  }
+
+  /* Auth */
+  .auth-modal {
+    padding: 20px 16px;
+  }
+
+  .auth-brand-logo {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+  }
+
+  .auth-brand h2 {
+    font-size: 18px;
+  }
+}
+
+/* ── Landscape Phone ───────────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+  .header {
+    padding: 4px 12px;
+  }
+
+  .header-nav {
+    order: 0;
+    width: auto;
+  }
+
+  .welcome {
+    padding: 16px;
+    gap: 8px;
+  }
+
+  .welcome-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .welcome h2 {
+    font-size: 16px;
+  }
+
+  .suggestions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .modal {
+    max-height: 95vh;
+    max-height: 95dvh;
+    align-self: center;
+    border-radius: var(--radius);
+  }
+
+  .modal-overlay {
+    align-items: center;
+    padding: 8px;
+  }
+
+  .input-area {
+    padding: 4px 12px;
+    padding-bottom: calc(4px + var(--safe-bottom));
+  }
+
+  .input-wrapper textarea {
+    min-height: 36px;
+    max-height: 80px;
+  }
+}

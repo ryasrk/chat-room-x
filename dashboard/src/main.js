@@ -283,28 +283,7 @@ shortcutsBtn.addEventListener('click', () => openShortcutsModal(shortcutsBtn));
 shortcutsClose.addEventListener('click', () => closeModal(shortcutsModal));
 shortcutsModal.addEventListener('click', (e) => { if (e.target === shortcutsModal) closeModal(shortcutsModal); });
 
-// ── Copy All ───────────────────────────────────────────────────
-const copyAllBtn = $('#copy-all-btn');
-if (copyAllBtn) {
-  copyAllBtn.addEventListener('click', async () => {
-    if (!state.messages || state.messages.length === 0) {
-      showToast('No messages to copy', 'info');
-      return;
-    }
-    const text = state.messages.map((msg) => {
-      const label = msg.role === 'user' ? 'User' : 'Assistant';
-      return `${label}:\n${msg.content}`;
-    }).join('\n\n---\n\n');
-    try {
-      await navigator.clipboard.writeText(text);
-      copyAllBtn.textContent = '✅ Copied!';
-      showToast('Conversation copied to clipboard', 'success');
-      setTimeout(() => { copyAllBtn.textContent = '📋 Copy All'; }, 2000);
-    } catch {
-      showToast('Failed to copy', 'error');
-    }
-  });
-}
+
 
 // ── Export Modal ───────────────────────────────────────────────
 exportBtn.addEventListener('click', () => openModal(exportModal, exportBtn));
