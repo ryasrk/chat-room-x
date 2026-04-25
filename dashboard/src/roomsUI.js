@@ -1236,8 +1236,9 @@ export function closeRoomChat() {
   if (roomAiPage) roomAiPage.hidden = true;
   if (roomAiBtn) roomAiBtn.hidden = true;
   if (roomNote) { roomNote.hidden = true; roomNote.textContent = ''; }
-  if (roomBots) { roomBots.hidden = true; roomBots.innerHTML = ''; }
+  if (roomBots) { roomBots.hidden = true; roomBots.classList.remove('mobile-expanded'); roomBots.innerHTML = ''; }
   hideMentionMenu();
+  closeOverflowMenu();
   applyActiveRoomCard();
 }
 
