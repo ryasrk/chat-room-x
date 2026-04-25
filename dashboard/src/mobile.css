@@ -1279,6 +1279,79 @@
     font-size: 12px;
   }
 
+  /* ══ Fullscreen Preview — Mobile ══════════════ */
+  .workspace-main.is-fullscreen {
+    z-index: 10000;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .workspace-main.is-fullscreen .workspace-preview-header {
+    padding: 8px 10px 6px;
+    gap: 6px;
+    flex-direction: column;
+  }
+
+  .workspace-main.is-fullscreen .workspace-preview-header h4 {
+    font-size: 13px;
+  }
+
+  .workspace-main.is-fullscreen .workspace-preview-actions {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .workspace-main.is-fullscreen .workspace-preview-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .workspace-main.is-fullscreen .workspace-preview-body {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y pinch-zoom;
+  }
+
+  /* Code in fullscreen: full scroll both directions */
+  .workspace-main.is-fullscreen .file-preview-code {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    white-space: pre;
+    font-size: 12px;
+    padding: 12px;
+    border-radius: 0;
+    border: none;
+  }
+
+  .workspace-main.is-fullscreen .file-preview-content {
+    padding: 0;
+  }
+
+  /* Live preview iframe: allow touch interaction */
+  .workspace-main.is-fullscreen .workspace-live-preview {
+    touch-action: pan-x pan-y pinch-zoom;
+    min-height: 100%;
+  }
+
+  .workspace-main.is-fullscreen .workspace-live-shell {
+    padding: 0;
+    height: 100%;
+  }
+
+  /* Fullscreen nav buttons: compact */
+  .fullscreen-nav-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .fullscreen-file-indicator {
+    font-size: 10px;
+  }
+
   /* Workspace progress list items */
   .workspace-progress-list {
     padding: 4px 8px;

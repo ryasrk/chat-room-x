@@ -1805,6 +1805,8 @@
 
 .workspace-main.is-fullscreen .workspace-preview-body {
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .workspace-main.is-fullscreen .workspace-live-shell {
@@ -1821,6 +1823,58 @@
 .workspace-main.is-fullscreen .file-preview-content {
   max-height: none;
   padding: 24px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fullscreen code: horizontal + vertical scroll, touch-friendly */
+.workspace-main.is-fullscreen .file-preview-code {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: pre;
+  touch-action: pan-x pan-y;
+  max-height: none;
+}
+
+/* Fullscreen file nav buttons */
+.fullscreen-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.fullscreen-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.fullscreen-nav-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.fullscreen-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.fullscreen-file-indicator {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding: 0 4px;
 }
 
 .workspace-run-output {

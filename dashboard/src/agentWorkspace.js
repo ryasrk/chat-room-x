@@ -379,21 +379,105 @@ export function togglePreviewFullscreen() {
   const isFullscreen = workspaceMain.classList.toggle('is-fullscreen');
   const fullscreenBtn = rs.panel?.querySelector('#agent-room-fullscreen-btn');
   if (fullscreenBtn) {
-    fullscreenBtn.textContent = isFullscreen ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
+    fullscreenBtn.textContent = isFullscreen ? '⛶ Exit' : '⛶ Fullscreen';
   }
 
-  // Handle Escape key to exit fullscreen
   if (isFullscreen) {
-    const handleEscape = (e) => {
+    // Inject file navigation buttons into the preview header
+    _injectFullscreenNav(workspaceMain);
+
+    // Handle Escape key and arrow keys for navigation
+    const handleKey = (e) => {
       if (e.key === 'Escape') {
-        workspaceMain.classList.remove('is-fullscreen');
-        if (fullscreenBtn) fullscreenBtn.textContent = '⛶ Fullscreen';
-        document.removeEventListener('keydown', handleEscape);
-        syncWorkspacePreviewActions();
+        _exitFullscreen(workspaceMain, fullscreenBtn, handleKey);
+        return;
       }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); _navigateFile(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); _navigateFile(1); }
     };
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKey);
+    workspaceMain._fullscreenKeyHandler = handleKey;
+
+    // Lock body scroll on mobile
+    document.body.style.overflow = 'hidden';
+  } else {
+    _cleanupFullscreen(workspaceMain, fullscreenBtn);
   }
+}
+
+function _exitFullscreen(workspaceMain, fullscreenBtn, keyHandler) {
+  workspaceMain.classList.remove('is-fullscreen');
+  if (fullscreenBtn) fullscreenBtn.textContent = '⛶ Fullscreen';
+  _cleanupFullscreen(workspaceMain, fullscreenBtn);
+  if (keyHandler) document.removeEventListener('keydown', keyHandler);
+  syncWorkspacePreviewActions();
+}
+
+function _cleanupFullscreen(workspaceMain) {
+  document.body.style.overflow = '';
+  const nav = workspaceMain.querySelector('.fullscreen-nav');
+  if (nav) nav.remove();
+  if (workspaceMain._fullscreenKeyHandler) {
+    document.removeEventListener('keydown', workspaceMain._fullscreenKeyHandler);
+    workspaceMain._fullscreenKeyHandler = null;
+  }
+}
+
+function _getFileList() {
+  const files = (rs.agentRoomWorkspaceFiles || [])
+    .filter((f) => f.type !== 'directory' && f.path && !f.path.startsWith('agent/'))
+    .map((f) => f.path);
+  return files;
+}
+
+function _navigateFile(direction) {
+  const files = _getFileList();
+  if (files.length === 0) return;
+  const currentIdx = files.indexOf(rs.agentRoomSelectedFile);
+  const nextIdx = currentIdx + direction;
+  if (nextIdx < 0 || nextIdx >= files.length) return;
+  openAgentFile(files[nextIdx]);
+  _updateFullscreenNav();
+}
+
+function _injectFullscreenNav(workspaceMain) {
+  // Remove existing nav if any
+  const existing = workspaceMain.querySelector('.fullscreen-nav');
+  if (existing) existing.remove();
+
+  const files = _getFileList();
+  const currentIdx = files.indexOf(rs.agentRoomSelectedFile);
+
+  const nav = document.createElement('div');
+  nav.className = 'fullscreen-nav';
+  nav.innerHTML = `
+    <button type="button" class="fullscreen-nav-btn" data-nav="-1" title="Previous file (←)" aria-label="Previous file" ${currentIdx <= 0 ? 'disabled' : ''}>‹</button>
+    <span class="fullscreen-file-indicator">${currentIdx + 1}/${files.length}</span>
+    <button type="button" class="fullscreen-nav-btn" data-nav="1" title="Next file (→)" aria-label="Next file" ${currentIdx >= files.length - 1 ? 'disabled' : ''}>›</button>
+  `;
+
+  nav.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-nav]');
+    if (btn && !btn.disabled) {
+      _navigateFile(Number(btn.dataset.nav));
+    }
+  });
+
+  const header = workspaceMain.querySelector('.workspace-preview-header');
+  if (header) {
+    const actions = header.querySelector('.workspace-preview-actions');
+    if (actions) {
+      actions.prepend(nav);
+    } else {
+      header.appendChild(nav);
+    }
+  }
+}
+
+function _updateFullscreenNav() {
+  const workspaceMain = rs.panel?.querySelector('.workspace-main');
+  if (!workspaceMain?.classList.contains('is-fullscreen')) return;
+  _injectFullscreenNav(workspaceMain);
 }
 
 export async function runSelectedAgentPythonFile() {
