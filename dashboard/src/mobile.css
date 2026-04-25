@@ -1179,7 +1179,9 @@
     box-shadow: none;
     flex: 1;
     min-height: 0;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Preview header: stack vertically */
@@ -1243,9 +1245,17 @@
     font-size: 10px;
   }
 
+  /* Preview body: vertical scroll only, let code blocks handle horizontal */
+  .workspace-preview-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* Preview content */
   .file-preview-content {
     padding: 8px;
+    overflow: visible;
   }
 
   /* Code: horizontal scroll, no word wrap */
@@ -1255,9 +1265,13 @@
     font-size: 12px;
     line-height: 1.6;
     overflow-x: auto;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     white-space: pre;
     word-break: normal;
+    touch-action: pan-x pan-y;
+    /* Prevent parent from stealing horizontal swipe */
+    overscroll-behavior-x: contain;
   }
 
   /* Markdown: wrap text naturally */
