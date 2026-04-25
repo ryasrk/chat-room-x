@@ -38,6 +38,7 @@ import { resetHandoffTimeline, renderHandoffTimeline, extractHandoffsFromMessage
 import { clearAllTypingIndicators } from './agentTypingIndicator.js';
 import { loadSnapshots, clearSnapshots, renderSnapshotSection } from './agentSnapshots.js';
 import { loadSkills, clearSkills, renderSkillSection } from './agentSkills.js';
+import { showOverflowMenu, closeOverflowMenu } from './overflowMenu.js';
 
 // ── Rooms Panel (sidebar-like list) ────────────────────────────
 
@@ -84,12 +85,13 @@ export function createRoomsView() {
         </div>
         <div class="room-chat-actions">
           <span id="room-connection-state" class="agent-room-connection connection-idle" hidden role="status" aria-live="polite" aria-label="Connection status">Idle</span>
-          <button id="room-ai-btn" class="btn-sm btn-secondary" title="Open AI agents" hidden aria-label="Open AI agents">AI</button>
-          <button id="room-artifacts-btn" class="btn-sm btn-secondary room-artifacts-btn" title="View generated files & artifacts" hidden aria-label="View artifacts">📎 Artifacts <span id="room-artifacts-count" class="artifacts-badge" hidden aria-label="Artifact count">0</span></button>
-          <button id="room-download-btn" class="btn-sm btn-secondary" title="Download workspace ZIP" hidden aria-label="Download workspace as ZIP">📥 ZIP</button>
-          <button id="room-invite-btn" class="btn-sm btn-secondary" title="Copy invite code">Invite</button>
-          <button id="room-leave-btn" class="btn-sm btn-secondary" title="Leave room">Leave</button>
-          <button id="room-delete-btn" class="btn-sm btn-danger" title="Delete room (owner only)" hidden>Delete</button>
+          <button id="room-ai-btn" class="btn-sm btn-secondary room-action-primary" title="Open AI agents" hidden aria-label="Open AI agents">AI</button>
+          <button id="room-artifacts-btn" class="btn-sm btn-secondary room-action-primary room-artifacts-btn" title="View generated files & artifacts" hidden aria-label="View artifacts">📎 Artifacts <span id="room-artifacts-count" class="artifacts-badge" hidden aria-label="Artifact count">0</span></button>
+          <button id="room-download-btn" class="btn-sm btn-secondary room-action-secondary" title="Download workspace ZIP" hidden aria-label="Download workspace as ZIP">📥 ZIP</button>
+          <button id="room-invite-btn" class="btn-sm btn-secondary room-action-secondary" title="Copy invite code">Invite</button>
+          <button id="room-leave-btn" class="btn-sm btn-secondary room-action-secondary" title="Leave room">Leave</button>
+          <button id="room-delete-btn" class="btn-sm btn-danger room-action-secondary" title="Delete room (owner only)" hidden>Delete</button>
+          <button id="room-overflow-btn" class="btn-sm btn-secondary room-overflow-trigger" title="More actions" aria-label="More actions" aria-haspopup="menu">⋯</button>
         </div>
       </div>
       <div class="room-chat-note" id="room-chat-note" hidden></div>
@@ -614,6 +616,28 @@ export function initRoomsUI() {
     closeRoomChat();
   });
 
+  // ── Phase 2: Toggle bot pills on mobile via member count tap ──
+  const membersEl = rs.panel.querySelector('#room-chat-members');
+  if (membersEl) {
+    membersEl.style.cursor = 'pointer';
+    membersEl.addEventListener('click', () => {
+      const bots = rs.panel.querySelector('#room-ai-bots') || rs.panel.querySelector('#room-chat-bots');
+      if (bots && window.innerWidth <= 768) {
+        bots.classList.toggle('mobile-expanded');
+      }
+    });
+  }
+
+  // ── Phase 2 & 6: Auto-collapse handoff section on mobile ─────
+  if (window.innerWidth <= 768) {
+    const handoffToggle = rs.panel.querySelector('.sidebar-section-toggle[data-section="handoffs"]');
+    if (handoffToggle) {
+      handoffToggle.setAttribute('aria-expanded', 'false');
+      const handoffBody = rs.panel.querySelector('#sidebar-section-handoffs');
+      if (handoffBody) handoffBody.classList.add('collapsed');
+    }
+  }
+
   inviteBtn.addEventListener('click', async () => {
     if (!rs.currentRoomId) return;
     try {
@@ -667,6 +691,21 @@ export function initRoomsUI() {
   const downloadBtn = rs.panel.querySelector('#room-download-btn');
   if (downloadBtn) {
     downloadBtn.addEventListener('click', () => handleDownloadWorkspace());
+  }
+
+  // ── Overflow menu for mobile ──────────────────────────────────
+  const overflowBtn = rs.panel.querySelector('#room-overflow-btn');
+  if (overflowBtn) {
+    overflowBtn.addEventListener('click', () => {
+      const dlBtn = rs.panel.querySelector('#room-download-btn');
+      const delBtn = rs.panel.querySelector('#room-delete-btn');
+      showOverflowMenu(overflowBtn, [
+        { label: 'Download ZIP', icon: '📥', hidden: dlBtn?.hidden, action: () => handleDownloadWorkspace() },
+        { label: 'Copy Invite Code', icon: '🔗', action: () => inviteBtn.click() },
+        { label: 'Leave Room', icon: '👋', action: () => leaveBtn.click() },
+        { divider: true, label: 'Delete Room', icon: '🗑️', danger: true, hidden: delBtn?.hidden, action: () => delBtn?.click() },
+      ]);
+    });
   }
 
   if (roomAiBtn) {

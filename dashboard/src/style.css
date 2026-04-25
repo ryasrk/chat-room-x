@@ -191,6 +191,79 @@ summary:focus-visible {
   border-color: var(--accent);
 }
 
+/* ── Overflow Menu (mobile room actions) ────────── */
+.room-overflow-trigger {
+  display: none; /* Hidden on desktop, shown via mobile.css */
+}
+
+.overflow-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 200;
+  min-width: 180px;
+  padding: 6px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: overflow-menu-in 0.15s ease-out;
+}
+
+@keyframes overflow-menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.overflow-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s;
+  min-height: 44px;
+  text-align: left;
+  width: 100%;
+}
+
+.overflow-menu-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.overflow-menu-item--danger {
+  color: var(--danger);
+}
+
+.overflow-menu-item--danger:hover {
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.overflow-menu-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.overflow-menu-label {
+  flex: 1;
+}
+
+.overflow-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 8px;
+}
+
 /* ── View Panels ────────────────────────────────── */
 .view-panel {
   display: flex;
