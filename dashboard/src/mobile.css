@@ -359,6 +359,8 @@
   .agent-room-page {
     grid-template-columns: 1fr;
     min-height: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .agent-room-sidebar {
@@ -366,6 +368,20 @@
     border-bottom: 1px solid var(--border);
     padding: 12px;
     max-height: none;
+    overflow-y: visible;
+  }
+
+  .agent-room-sidebar-header h2 {
+    font-size: 18px;
+  }
+
+  .agent-room-sidebar-header p {
+    font-size: 12px;
+  }
+
+  .agent-room-list-item {
+    padding: 10px;
+    border-radius: 12px;
   }
 
   .agent-room-main {
@@ -374,6 +390,7 @@
 
   .agent-room-detail {
     gap: 12px;
+    height: auto;
   }
 
   .agent-room-header {
@@ -408,6 +425,7 @@
     width: 100%;
     display: flex;
     gap: 6px;
+    flex-wrap: wrap;
   }
 
   .agent-room-header-actions button {
@@ -419,6 +437,7 @@
     text-align: center;
     justify-content: center;
     white-space: nowrap;
+    min-width: 0;
   }
 
   .agent-room-section-header {
@@ -450,6 +469,18 @@
     border-radius: 12px;
   }
 
+  .agent-status-header {
+    gap: 6px;
+  }
+
+  .agent-status-header strong {
+    font-size: 12px;
+  }
+
+  .agent-status-pill {
+    font-size: 9px;
+  }
+
   .agent-room-center,
   .agent-room-panel {
     border-radius: 14px;
@@ -476,6 +507,7 @@
   .agent-room-messages {
     padding: 12px;
     gap: 10px;
+    max-height: 50vh;
   }
 
   .agent-room-message {
@@ -499,6 +531,22 @@
     padding: 12px;
   }
 
+  .agent-room-composer input {
+    font-size: 16px; /* prevents iOS zoom */
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .agent-room-composer button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .agent-room-page--linked {
+    border-radius: 16px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  }
+
   .agent-room-main--linked {
     padding: 10px;
   }
@@ -507,6 +555,14 @@
     min-height: 200px;
     padding: 20px;
     border-radius: 16px;
+  }
+
+  .agent-room-empty h3 {
+    font-size: 18px;
+  }
+
+  .agent-room-empty p {
+    font-size: 12px;
   }
 
   .agent-room-empty h3 {
@@ -522,6 +578,7 @@
     padding: 8px 10px;
     gap: 6px;
     flex-wrap: wrap;
+    align-items: center;
   }
 
   .room-chat-header .btn-icon {
@@ -534,6 +591,7 @@
   .room-chat-info {
     flex: 1;
     min-width: 0;
+    overflow: hidden;
   }
 
   .room-chat-info-top {
@@ -548,10 +606,17 @@
 
   .room-chat-info h3 {
     font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .room-member-count {
     font-size: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .room-chat-actions {
@@ -584,6 +649,7 @@
 
   .room-chat-main {
     min-height: 0;
+    flex: 1;
   }
 
   .room-thread-header {
@@ -601,10 +667,55 @@
 
   .room-messages {
     padding: 10px 12px;
+    min-height: 120px;
+  }
+
+  .room-msg {
+    max-width: 100%;
+  }
+
+  .room-msg-content {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-radius: 14px;
+  }
+
+  .room-msg-header {
+    gap: 6px;
+  }
+
+  .room-msg-author {
+    font-size: 11px;
+    max-width: 140px;
+  }
+
+  .room-msg-time {
+    font-size: 10px;
+  }
+
+  .room-msg-type-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  .room-msg-artifacts {
+    gap: 6px;
+  }
+
+  .room-msg-artifact {
+    padding: 8px 10px;
+    font-size: 10px;
+    border-radius: 10px;
+  }
+
+  .room-msg-handoff::before {
+    left: -6px;
+    width: 2px;
   }
 
   .room-composer {
     padding: 8px 12px 10px;
+    padding-bottom: calc(10px + var(--safe-bottom));
   }
 
   .room-composer-main {
@@ -612,8 +723,8 @@
   }
 
   .room-composer-main input {
-    font-size: 14px;
-    padding: 8px 10px;
+    font-size: 16px; /* prevents iOS zoom */
+    padding: 10px 12px;
   }
 
   .room-composer-hint {
@@ -628,12 +739,14 @@
     max-height: 50vh;
     border-left: none;
     border-top: 1px solid var(--border);
+    transition: max-height 0.25s ease;
   }
 
   .room-agent-sidebar.collapsed {
     max-height: 0;
     max-width: 100% !important;
     border-top: none;
+    overflow: hidden;
   }
 
   .room-sidebar-toggle {
@@ -642,6 +755,18 @@
     height: 28px;
     border-left: none;
     border-top: 1px solid var(--border);
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  /* Rotate toggle icon for horizontal layout */
+  .room-sidebar-toggle .sidebar-toggle-icon {
+    transform: rotate(90deg);
+  }
+
+  .room-agent-sidebar.collapsed + .room-sidebar-toggle .sidebar-toggle-icon,
+  .room-sidebar-toggle[aria-expanded="false"] .sidebar-toggle-icon {
+    transform: rotate(-90deg);
   }
 
   .sidebar-section-toggle {
@@ -687,13 +812,28 @@
 
   /* ── Bot Pills in Room Header ───────────────── */
   .room-chat-bots {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: row;
     gap: 6px;
+    padding: 8px 12px 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .room-chat-bots::-webkit-scrollbar {
+    display: none;
   }
 
   .room-chat-bot-pill {
-    padding: 6px 8px;
+    padding: 8px 10px;
     font-size: 11px;
+    min-width: 160px;
+    max-width: 220px;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    border-radius: 14px;
   }
 
   .room-chat-bot-name {
@@ -702,6 +842,11 @@
 
   .room-chat-bot-role {
     font-size: 10px;
+  }
+
+  .room-chat-bot-status {
+    font-size: 9px;
+    padding: 2px 6px;
   }
 
   /* ── AI Agents Config Page ──────────────────── */
@@ -713,18 +858,26 @@
   .room-ai-body {
     padding: 12px;
     gap: 12px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .room-ai-intro {
     padding: 12px;
+    border-radius: 14px;
   }
 
   .room-ai-panel {
     border-radius: 14px;
+    padding: 12px;
   }
 
   .room-ai-panel-header {
-    padding: 12px;
+    padding: 0 0 10px;
+  }
+
+  .room-note-eyebrow {
+    font-size: 10px;
   }
 
   .room-note-title {
@@ -733,6 +886,16 @@
 
   .room-note-body {
     font-size: 11px;
+  }
+
+  .room-ai-bots {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .room-ai-bots .room-chat-bot-pill {
+    min-width: 0;
+    max-width: none;
   }
 
   /* ── Mention Menu ───────────────────────────── */
@@ -755,6 +918,7 @@
   .rework-decision-bar {
     padding: 10px;
     border-radius: 12px;
+    margin: 6px 8px;
   }
 
   .rework-decision-label {
@@ -764,11 +928,90 @@
 
   .rework-decision-actions {
     gap: 6px;
+    flex-wrap: wrap;
   }
 
   .rework-btn {
     padding: 5px 10px;
     font-size: 12px;
+    flex: 1;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  /* ── Workspace View (Artifacts) ──────────────── */
+  .room-workspace {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .workspace-body {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .workspace-sidebar {
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-accordion {
+    border-radius: 10px;
+  }
+
+  .sidebar-accordion-header {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+
+  .workspace-eyebrow {
+    font-size: 10px;
+  }
+
+  .room-workspace-title h3 {
+    font-size: 14px;
+  }
+
+  .room-workspace-title .room-member-count {
+    font-size: 10px;
+  }
+
+  .file-preview-content {
+    padding: 10px;
+  }
+
+  .file-preview-code,
+  .file-preview-markdown {
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .workspace-empty-state,
+  .file-preview-state {
+    margin: 10px;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 12px;
+  }
+
+  /* ── Agent Typing Indicator ─────────────────── */
+  .agent-typing-indicator {
+    padding: 4px 10px;
+    gap: 6px;
+  }
+
+  .typing-label {
+    font-size: 11px;
+  }
+
+  /* ── XB Progress Bar ────────────────────────── */
+  .xb-progress-bar {
+    margin: 4px 8px;
+    font-size: 11px;
   }
 
   /* ── Agent Task Board ───────────────────────── */
@@ -777,15 +1020,48 @@
     gap: 8px;
   }
 
+  .agent-task-form input,
+  .agent-task-form textarea {
+    font-size: 16px; /* prevents iOS zoom */
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
   .agent-task-form-row {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .agent-task-form-row select {
+    min-height: 40px;
+    font-size: 14px;
+  }
+
+  .agent-task-form-row button {
+    min-height: 40px;
   }
 
   .agent-task-item {
     grid-template-columns: 1fr;
     padding: 10px;
     gap: 6px;
+    border-radius: 14px;
+  }
+
+  .agent-task-title-row h5 {
+    font-size: 13px;
+  }
+
+  .agent-task-controls {
+    gap: 8px;
+  }
+
+  .agent-task-controls select {
+    min-height: 36px;
+  }
+
+  .agent-task-details {
+    font-size: 11px;
   }
 
   /* ── Welcome Screen ─────────────────────────── */
@@ -1229,10 +1505,19 @@
     font-size: 16px;
   }
 
+  .agent-room-header-actions {
+    flex-direction: column;
+  }
+
   .agent-room-header-actions button {
     font-size: 11px;
     padding: 5px 6px;
     min-height: 32px;
+  }
+
+  .agent-room-chip {
+    font-size: 11px;
+    padding: 5px 8px;
   }
 
   /* Room chat header — extra compact */
@@ -1255,6 +1540,18 @@
     min-height: 26px;
   }
 
+  /* Bot pills: single column on small phones */
+  .room-chat-bots {
+    padding: 6px 8px 4px;
+    gap: 4px;
+  }
+
+  .room-chat-bot-pill {
+    min-width: 140px;
+    max-width: 180px;
+    padding: 6px 8px;
+  }
+
   /* Sidebar sections tighter */
   .room-agent-sidebar {
     max-height: 45vh;
@@ -1271,11 +1568,36 @@
 
   .room-composer {
     padding: 6px 10px 8px;
+    padding-bottom: calc(8px + var(--safe-bottom));
   }
 
   .room-mention-menu {
     left: 6px;
     right: 6px;
+  }
+
+  /* AI page panels tighter */
+  .room-ai-body {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .room-ai-panel {
+    padding: 10px;
+  }
+
+  .agent-task-form {
+    padding: 8px;
+  }
+
+  /* Workspace view tighter */
+  .workspace-body {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .workspace-sidebar {
+    max-height: 35vh;
   }
 
   /* Modal: full screen on small phones */
