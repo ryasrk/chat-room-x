@@ -359,9 +359,18 @@ function renderTables(text, ctx) {
 
 function renderInlineMarkdown(text, ctx) {
   // Inline code (protect first)
-  text = text.replace(/`([^`]+)`/g, (_m, code) =>
-    sentinel(`<code class="inline-code">${escapeHtml(code)}</code>`, ctx)
-  );
+  // Text is already HTML-escaped from the pipeline. We decode entities back
+  // to original chars inside <code> so DOMPurify doesn't double-encode them.
+  // The <code> content is safe because it's wrapped in a sentinel.
+  text = text.replace(/`([^`]+)`/g, (_m, code) => {
+    const decoded = code
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+    return sentinel(`<code class="inline-code">${escapeHtml(decoded)}</code>`, ctx);
+  });
 
   // Bold + italic
   text = text.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
@@ -515,6 +524,39 @@ function renderBlockElements(text, ctx) {
     if (olMatch) {
       addListItem(olMatch[2], getIndent(line), 'ol');
       continue;
+    }
+
+    // List continuation: any non-empty, non-list-item, non-block line
+    // while a list is open — treat as continuation of the current <li>.
+    // LLM output often wraps long list items without indentation.
+    if (listStack.length > 0 && listStack[listStack.length - 1].liOpen && line.trim() !== '') {
+      // Not a heading, not a rule, not a blockquote — it's continuation text
+      if (!/^#{2,4}\s/.test(line) && !/^-{3,}$/.test(line.trim()) && !line.startsWith('&gt;')) {
+        result.push('<br>' + renderInlineMarkdown(line.trim(), ctx));
+        continue;
+      }
+    }
+
+    // Blank line inside a list — keep the list open if more items follow
+    if (listStack.length > 0 && line.trim() === '') {
+      let keepList = false;
+      for (let j = i + 1; j < lines.length; j++) {
+        const nextLine = lines[j].trim();
+        if (nextLine === '') continue;
+        // Check if next content is a list item (same or nested)
+        if (/^\s*[-*+]\s+/.test(lines[j]) || /^\s*\d+\.\s+/.test(lines[j])) {
+          keepList = true;
+        }
+        // Also keep open if next line looks like continuation text
+        // (not a heading, rule, or blockquote)
+        if (nextLine && !/^#{2,4}\s/.test(nextLine) && !/^-{3,}$/.test(nextLine) && !/^&gt;/.test(nextLine)) {
+          keepList = true;
+        }
+        break;
+      }
+      if (keepList) {
+        continue;
+      }
     }
 
     // Regular line — close all open lists first
