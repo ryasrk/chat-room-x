@@ -33,7 +33,6 @@
   .pin-msg-btn,
   .reaction-btn {
     opacity: 0.7 !important;
-    padding: 6px 10px;
   }
 
   /* Larger copy button on touch */
@@ -86,30 +85,33 @@
   #app {
     flex-direction: column;
     height: 100vh;
-    height: 100dvh; /* dynamic viewport height for mobile browsers */
+    height: 100dvh;
   }
 
   html, body {
     height: 100dvh;
-    overscroll-behavior: none; /* prevent pull-to-refresh interference */
+    overscroll-behavior: none;
   }
 
   /* ── Header ─────────────────────────────────── */
   .header {
-    padding: 8px 12px;
+    padding: 8px 10px;
     padding-top: calc(8px + var(--safe-top));
-    gap: 4px;
+    gap: 0;
     flex-wrap: wrap;
+    align-items: center;
   }
 
   .header-left {
-    gap: 6px;
-    flex-shrink: 0;
+    gap: 8px;
+    flex: 1;
     min-width: 0;
+    overflow: hidden;
   }
 
   .header-left h1 {
-    font-size: 15px;
+    font-size: 16px;
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -119,51 +121,34 @@
     display: none;
   }
 
-  /* Nav tabs: own row, horizontally scrollable */
-  .header-nav {
-    order: 3;
-    width: 100%;
-    gap: 4px;
-    margin-left: 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding: 4px 0;
-    border-top: 1px solid var(--border);
-    margin-top: 2px;
-  }
-
-  .header-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-tab {
-    padding: 6px 12px;
-    font-size: 12px;
-    flex-shrink: 0;
-  }
-
-  /* Header right: compact, only essential items */
+  /* Header right: compact icon row */
   .header-right {
-    gap: 4px;
+    gap: 6px;
     flex-shrink: 0;
     margin-left: auto;
+    align-items: center;
   }
 
   .header-right select {
     font-size: 11px;
     padding: 4px 6px;
-    max-width: 90px;
+    max-width: 80px;
+    border-radius: 6px;
+    min-height: 32px;
   }
 
   .header-right button {
-    padding: 4px 6px;
-    font-size: 13px;
+    padding: 0;
+    font-size: 14px;
     min-width: 32px;
     min-height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
   }
 
   /* Hide shortcuts button on mobile (accessible via settings) */
@@ -171,26 +156,82 @@
     display: none;
   }
 
-  /* Hide context bar on mobile */
+  /* Hide context bar on mobile — info available in footer */
   .context-bar,
   .context-label {
     display: none;
   }
 
-  /* User menu: ensure dropdown doesn't overflow screen */
-  .user-dropdown {
-    right: -8px;
-    min-width: 180px;
+  /* User menu */
+  .user-menu-btn {
+    padding: 0;
+    background: transparent !important;
+    border: none !important;
+    min-width: auto;
   }
 
   .user-avatar {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     font-size: 12px;
   }
 
-  .user-menu-btn {
+  .user-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 16px;
+    padding-bottom: calc(16px + var(--safe-bottom));
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 200;
+  }
+
+  /* Nav tabs: second row, evenly distributed */
+  .header-nav {
+    order: 3;
+    width: 100%;
+    gap: 0;
+    margin-left: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     padding: 0;
+    border-top: 1px solid var(--border);
+    margin-top: 6px;
+    justify-content: stretch;
+  }
+
+  .header-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tab {
+    flex: 1;
+    padding: 8px 4px;
+    font-size: 12px;
+    text-align: center;
+    justify-content: center;
+    border-radius: 0;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .nav-tab.active {
+    border-color: var(--accent);
+    background: transparent;
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .nav-tab:hover {
+    background: transparent;
   }
 
   /* ── Sidebar (mobile overlay) ───────────────── */
@@ -224,7 +265,7 @@
 
   .messages {
     max-width: 100%;
-    gap: 12px;
+    gap: 8px;
   }
 
   .message {
@@ -235,6 +276,7 @@
     width: 28px;
     height: 28px;
     font-size: 10px;
+    flex-shrink: 0;
   }
 
   .message-content {
@@ -258,8 +300,144 @@
     font-size: 12px;
   }
 
+  /* ── Message Meta & Actions (compact on mobile) ── */
+  .message-meta {
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .message-role {
+    font-size: 12px;
+  }
+
+  .message-time {
+    font-size: 10px;
+  }
+
+  /* Inline action buttons: icon-only, compact row */
+  .edit-msg-btn,
+  .regen-btn,
+  .pin-msg-btn,
+  .reaction-btn {
+    padding: 4px 6px;
+    font-size: 13px;
+    min-width: 28px;
+    min-height: 28px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .message-actions {
+    gap: 2px;
+    margin-top: 2px;
+  }
+
+  .copy-msg-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: 28px;
+    border-radius: 6px;
+  }
+
   .message-stats {
     flex-wrap: wrap;
+    gap: 6px;
+    font-size: 10px;
+  }
+
+  /* ── Agent Room (mobile) ────────────────────── */
+  .agent-room-page {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .agent-room-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 12px;
+    max-height: none;
+  }
+
+  .agent-room-main {
+    padding: 12px;
+  }
+
+  .agent-room-header {
+    flex-direction: column;
+    padding: 14px;
+    gap: 10px;
+    border-radius: 14px;
+  }
+
+  .agent-room-header h3 {
+    font-size: 18px;
+  }
+
+  .agent-room-header-meta {
+    gap: 6px;
+  }
+
+  .agent-room-header-actions {
+    width: 100%;
+    display: flex;
+    gap: 6px;
+  }
+
+  .agent-room-header-actions button {
+    flex: 1;
+    min-height: 36px;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .agent-room-section-header {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .agent-room-section-header h3 {
+    font-size: 16px;
+  }
+
+  .agent-room-layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .agent-room-agents {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .agent-status-card {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .agent-room-center,
+  .agent-room-panel {
+    border-radius: 14px;
+  }
+
+  .agent-room-composer {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .agent-room-main--linked {
+    padding: 10px;
+  }
+
+  /* Room chat header on mobile */
+  .room-chat-header {
+    padding: 8px 12px;
     gap: 8px;
   }
 
@@ -318,18 +496,29 @@
 
   .input-footer {
     max-width: 100%;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding: 0 2px;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 2px 4px;
+    font-size: 11px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .input-footer::-webkit-scrollbar {
+    display: none;
   }
 
   .footer-btn {
     font-size: 11px;
-    padding: 4px 6px;
+    padding: 4px 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .token-info {
     font-size: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   /* Plus menu: position above input */
@@ -578,7 +767,7 @@
   }
 
   .header-left h1 {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   #sidebar-toggle {
@@ -588,31 +777,38 @@
   }
 
   .header-right {
-    gap: 2px;
+    gap: 4px;
   }
 
-  /* Hide mode select on very small phones — use mode badge or settings */
+  /* Hide mode select on very small phones — use settings instead */
   .header-right select {
-    max-width: 72px;
-    font-size: 10px;
-    padding: 3px 4px;
-  }
-
-  /* Hide settings button on very small phones */
-  #settings-btn {
     display: none;
   }
 
+  /* Keep settings and theme visible — they're essential */
+  #settings-btn,
+  #theme-toggle {
+    display: flex !important;
+    min-width: 30px;
+    min-height: 30px;
+    font-size: 13px;
+  }
+
   .header-right button {
-    padding: 3px 5px;
-    font-size: 12px;
-    min-width: 28px;
-    min-height: 28px;
+    min-width: 30px;
+    min-height: 30px;
+    font-size: 13px;
   }
 
   .user-avatar {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  /* Nav tabs: tighter on small phones */
+  .nav-tab {
+    padding: 6px 2px;
     font-size: 11px;
   }
 
@@ -629,6 +825,16 @@
 
   .chat-container {
     padding: 8px 6px;
+  }
+
+  .messages {
+    gap: 6px;
+  }
+
+  .message-avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 9px;
   }
 
   .welcome {
@@ -659,7 +865,16 @@
 
   .footer-btn {
     font-size: 10px;
-    padding: 2px 4px;
+    padding: 3px 6px;
+  }
+
+  /* Agent room: single column agents */
+  .agent-room-agents {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-room-header h3 {
+    font-size: 16px;
   }
 
   /* Modal: full screen on small phones */
