@@ -1123,10 +1123,15 @@
     padding: 4px;
   }
 
-  /* Accordion: clip for border-radius but don't create scroll trap */
-  .sidebar-accordion {
+  /* Accordion: natural height, no overflow clipping, no flex tricks */
+  .sidebar-accordion,
+  .sidebar-accordion[open],
+  .sidebar-accordion:first-child[open] {
     border-radius: 10px;
-    overflow: clip;
+    overflow: visible !important;
+    flex: none !important;
+    display: block !important;
+    min-height: auto !important;
   }
 
   .sidebar-accordion-header {
