@@ -1251,24 +1251,42 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Live preview shell: scrollable container for wide iframe */
+  /* Live preview shell */
   .workspace-live-shell {
     padding: 0;
     height: 100%;
     min-height: 0;
-    overflow: scroll;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y pinch-zoom;
   }
 
-  /* Iframe renders at desktop width — user scrolls to see full page */
-  .workspace-live-preview {
-    width: 1024px;
-    min-width: 1024px;
-    height: 100%;
-    min-height: 800px;
-    border-radius: 4px;
+  /* Zoom toolbar: compact on mobile */
+  .live-zoom-toolbar {
+    padding: 4px 6px;
+    border-radius: 0;
+  }
+
+  .live-zoom-btn {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    font-size: 18px;
+  }
+
+  .live-zoom-level {
+    min-width: 48px;
+    height: 36px;
+    font-size: 11px;
+  }
+
+  /* Zoom viewport: scrollable, touch-friendly */
+  .live-zoom-viewport {
+    border-radius: 0;
     border: none;
+    touch-action: pan-x pan-y;
+    overflow: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .workspace-live-preview {
     touch-action: pan-x pan-y pinch-zoom;
   }
 
@@ -1364,24 +1382,18 @@
     padding: 0;
   }
 
-  /* Live preview in fullscreen: scrollable container with wide iframe */
+  /* Live preview in fullscreen */
   .workspace-main.is-fullscreen .workspace-live-shell {
     padding: 0;
     height: 100%;
-    overflow: scroll;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y pinch-zoom;
+  }
+
+  .workspace-main.is-fullscreen .live-zoom-viewport {
+    border-radius: 0;
   }
 
   .workspace-main.is-fullscreen .workspace-live-preview {
-    /* Render at desktop width so the full page is visible via scroll */
-    width: 1024px;
-    min-width: 1024px;
-    height: 100%;
     min-height: 200vh;
-    border: none;
-    border-radius: 0;
-    touch-action: pan-x pan-y pinch-zoom;
   }
 
   /* Fullscreen nav buttons: compact */

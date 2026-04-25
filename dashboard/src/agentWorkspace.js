@@ -480,6 +480,80 @@ function _updateFullscreenNav() {
   _injectFullscreenNav(workspaceMain);
 }
 
+// ── Live Preview Zoom ──────────────────────────────────────────
+
+const ZOOM_STEPS = [25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200];
+const ZOOM_DEFAULT = 100;
+
+function _initLiveZoom(container) {
+  let zoom = ZOOM_DEFAULT;
+  const viewport = container.querySelector('.live-zoom-viewport');
+  const iframe = container.querySelector('.workspace-live-preview');
+  const levelBtn = container.querySelector('.live-zoom-level');
+  if (!viewport || !iframe) return;
+
+  function applyZoom(newZoom) {
+    zoom = Math.max(ZOOM_STEPS[0], Math.min(ZOOM_STEPS[ZOOM_STEPS.length - 1], newZoom));
+    const scale = zoom / 100;
+    iframe.style.transform = `scale(${scale})`;
+    iframe.style.transformOrigin = 'top left';
+    // Adjust viewport scroll area to match scaled iframe size
+    iframe.style.width = `${1024 / scale}px`;
+    iframe.style.height = `${Math.max(800, viewport.clientHeight) / scale}px`;
+    if (levelBtn) levelBtn.textContent = `${zoom}%`;
+  }
+
+  // Button clicks
+  container.querySelector('.live-zoom-toolbar')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-zoom]');
+    if (!btn) return;
+    const action = btn.dataset.zoom;
+    if (action === 'in') {
+      const next = ZOOM_STEPS.find((s) => s > zoom) || zoom;
+      applyZoom(next);
+    } else if (action === 'out') {
+      const prev = [...ZOOM_STEPS].reverse().find((s) => s < zoom) || zoom;
+      applyZoom(prev);
+    } else if (action === 'reset') {
+      applyZoom(ZOOM_DEFAULT);
+    }
+  });
+
+  // Pinch-to-zoom on the viewport
+  let pinchStartDist = 0;
+  let pinchStartZoom = zoom;
+
+  viewport.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      pinchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      pinchStartZoom = zoom;
+    }
+  }, { passive: true });
+
+  viewport.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const ratio = dist / pinchStartDist;
+      applyZoom(Math.round(pinchStartZoom * ratio));
+    }
+  }, { passive: true });
+
+  // Ctrl+scroll / Cmd+scroll for desktop
+  viewport.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -10 : 10;
+      applyZoom(zoom + delta);
+    }
+  }, { passive: false });
+}
+
 export async function runSelectedAgentPythonFile() {
   if (!rs.currentAgentRoomId || !isPythonWorkspaceFile(rs.agentRoomSelectedFile)) return;
 
@@ -578,11 +652,22 @@ async function renderAgentFilePreview() {
   if (rs.agentRoomPreviewMode === 'live' && isHtmlWorkspaceFile(path) && content) {
     const previewDoc = await buildLivePreviewDocument(path, content);
     previews.forEach((preview) => {
-      preview.innerHTML = '<div class="workspace-live-shell"><iframe class="workspace-live-preview" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-same-origin" referrerpolicy="no-referrer"></iframe></div>';
+      preview.innerHTML = `
+        <div class="workspace-live-shell">
+          <div class="live-zoom-toolbar">
+            <button type="button" class="live-zoom-btn" data-zoom="out" title="Zoom out" aria-label="Zoom out">−</button>
+            <button type="button" class="live-zoom-level" data-zoom="reset" title="Reset zoom" aria-label="Reset zoom">100%</button>
+            <button type="button" class="live-zoom-btn" data-zoom="in" title="Zoom in" aria-label="Zoom in">+</button>
+          </div>
+          <div class="live-zoom-viewport">
+            <iframe class="workspace-live-preview" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-same-origin" referrerpolicy="no-referrer"></iframe>
+          </div>
+        </div>`;
       const iframe = preview.querySelector('.workspace-live-preview');
       if (iframe) {
         iframe.srcdoc = previewDoc;
       }
+      _initLiveZoom(preview);
     });
     return;
   }
