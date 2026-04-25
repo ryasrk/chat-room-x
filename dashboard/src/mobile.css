@@ -348,7 +348,14 @@
     font-size: 10px;
   }
 
-  /* ── Agent Room (mobile) ────────────────────── */
+  /* ══════════════════════════════════════════════
+     AGENT ROOM — Mobile (≤768px)
+     Covers both:
+     1. .agent-room-* (detail page layout)
+     2. .room-chat-* / .room-agent-sidebar (chat view with sidebar)
+     ══════════════════════════════════════════════ */
+
+  /* ── Agent Room Detail Page ─────────────────── */
   .agent-room-page {
     grid-template-columns: 1fr;
     min-height: auto;
@@ -365,19 +372,36 @@
     padding: 12px;
   }
 
+  .agent-room-detail {
+    gap: 12px;
+  }
+
   .agent-room-header {
     flex-direction: column;
-    padding: 14px;
-    gap: 10px;
+    padding: 12px;
+    gap: 8px;
     border-radius: 14px;
   }
 
   .agent-room-header h3 {
     font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .agent-room-header p {
+    margin: 4px 0 6px;
+    font-size: 12px;
   }
 
   .agent-room-header-meta {
     gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+
+  .agent-room-header-meta .agent-room-connection {
+    font-size: 9px;
+    padding: 3px 6px;
   }
 
   .agent-room-header-actions {
@@ -390,19 +414,24 @@
     flex: 1;
     min-height: 36px;
     font-size: 12px;
-    padding: 6px 10px;
+    padding: 6px 8px;
     border-radius: 8px;
     text-align: center;
     justify-content: center;
+    white-space: nowrap;
   }
 
   .agent-room-section-header {
-    padding: 14px;
+    padding: 12px;
     border-radius: 14px;
   }
 
   .agent-room-section-header h3 {
     font-size: 16px;
+  }
+
+  .agent-room-section-header p {
+    font-size: 12px;
   }
 
   .agent-room-layout {
@@ -426,19 +455,337 @@
     border-radius: 14px;
   }
 
+  .agent-room-right {
+    grid-template-rows: auto auto;
+    gap: 12px;
+  }
+
+  .agent-room-panel-header {
+    padding: 10px 12px 8px;
+  }
+
+  .agent-room-panel-header h4 {
+    font-size: 11px;
+  }
+
+  .agent-room-panel-header p {
+    font-size: 10px;
+    margin-top: 2px;
+  }
+
+  .agent-room-messages {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .agent-room-message {
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .agent-room-message-header {
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 10px;
+  }
+
+  .agent-room-message-body {
+    font-size: 11px;
+  }
+
   .agent-room-composer {
     grid-template-columns: 1fr;
     gap: 8px;
+    padding: 12px;
   }
 
   .agent-room-main--linked {
     padding: 10px;
   }
 
-  /* Room chat header on mobile */
+  .agent-room-empty {
+    min-height: 200px;
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .agent-room-empty h3 {
+    font-size: 20px;
+  }
+
+  .agent-room-empty p {
+    font-size: 12px;
+  }
+
+  /* ── Room Chat Header (AI Agent Room view) ──── */
   .room-chat-header {
+    padding: 8px 10px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .room-chat-header .btn-icon {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  .room-chat-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .room-chat-info-top {
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+
+  .room-chat-kind {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  .room-chat-info h3 {
+    font-size: 14px;
+  }
+
+  .room-member-count {
+    font-size: 10px;
+  }
+
+  .room-chat-actions {
+    width: 100%;
+    gap: 4px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    order: 3;
+    padding-top: 4px;
+    border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  }
+
+  .room-chat-header .btn-sm {
+    padding: 4px 8px;
+    font-size: 10px;
+    min-height: 28px;
+    border-radius: 6px;
+  }
+
+  /* Connection badge in room header */
+  .room-chat-actions .agent-room-connection {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+
+  /* ── Room Chat Body & Sidebar ───────────────── */
+  .room-chat-body.has-sidebar {
+    flex-direction: column;
+  }
+
+  .room-chat-main {
+    min-height: 0;
+  }
+
+  .room-thread-header {
     padding: 8px 12px;
     gap: 8px;
+  }
+
+  .room-thread-copy h4 {
+    font-size: 14px;
+  }
+
+  .room-thread-copy p {
+    font-size: 11px;
+  }
+
+  .room-messages {
+    padding: 10px 12px;
+  }
+
+  .room-composer {
+    padding: 8px 12px 10px;
+  }
+
+  .room-composer-main {
+    gap: 8px;
+  }
+
+  .room-composer-main input {
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+
+  .room-composer-hint {
+    font-size: 10px;
+  }
+
+  /* ── Agent Sidebar (Handoff/Progress/Logs) ──── */
+  .room-agent-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    max-height: 50vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .room-agent-sidebar.collapsed {
+    max-height: 0;
+    max-width: 100% !important;
+    border-top: none;
+  }
+
+  .room-sidebar-toggle {
+    width: 100%;
+    min-width: 100%;
+    height: 28px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .sidebar-section-toggle {
+    padding: 8px 12px;
+    font-size: 10px;
+  }
+
+  .sidebar-section-icon {
+    font-size: 12px;
+  }
+
+  .sidebar-section-body .agent-room-progress,
+  .sidebar-section-body .agent-room-handoff-viz,
+  .sidebar-section-body .agent-room-logs {
+    padding: 6px 8px 10px;
+  }
+
+  .agent-room-log {
+    padding: 8px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+
+  .agent-room-log-header {
+    font-size: 10px;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .agent-room-log-body {
+    font-size: 11px;
+  }
+
+  /* ── Room Chat Note (floating) ──────────────── */
+  .room-chat-note {
+    top: 80px;
+    right: 8px;
+    width: min(320px, calc(100% - 16px));
+    padding: 10px 12px;
+    border-radius: 14px;
+    font-size: 12px;
+  }
+
+  /* ── Bot Pills in Room Header ───────────────── */
+  .room-chat-bots {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .room-chat-bot-pill {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .room-chat-bot-name {
+    font-size: 11px;
+  }
+
+  .room-chat-bot-role {
+    font-size: 10px;
+  }
+
+  /* ── AI Agents Config Page ──────────────────── */
+  .room-ai-header {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .room-ai-body {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .room-ai-intro {
+    padding: 12px;
+  }
+
+  .room-ai-panel {
+    border-radius: 14px;
+  }
+
+  .room-ai-panel-header {
+    padding: 12px;
+  }
+
+  .room-note-title {
+    font-size: 13px;
+  }
+
+  .room-note-body {
+    font-size: 11px;
+  }
+
+  /* ── Mention Menu ───────────────────────────── */
+  .room-mention-menu {
+    left: 10px;
+    right: 10px;
+    bottom: calc(100% + 4px);
+    padding: 8px;
+    border-radius: 14px;
+    gap: 4px;
+  }
+
+  .room-mention-item {
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  /* ── Rework Decision Bar ────────────────────── */
+  .rework-decision-bar {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .rework-decision-label {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .rework-decision-actions {
+    gap: 6px;
+  }
+
+  .rework-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  /* ── Agent Task Board ───────────────────────── */
+  .agent-task-form {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .agent-task-form-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .agent-task-item {
+    grid-template-columns: 1fr;
+    padding: 10px;
+    gap: 6px;
   }
 
   /* ── Welcome Screen ─────────────────────────── */
@@ -868,13 +1215,67 @@
     padding: 3px 6px;
   }
 
-  /* Agent room: single column agents */
+  /* ── Agent Room (small phone) ─────────────── */
   .agent-room-agents {
     grid-template-columns: 1fr;
   }
 
+  .agent-room-header {
+    padding: 10px;
+    gap: 6px;
+  }
+
   .agent-room-header h3 {
     font-size: 16px;
+  }
+
+  .agent-room-header-actions button {
+    font-size: 11px;
+    padding: 5px 6px;
+    min-height: 32px;
+  }
+
+  /* Room chat header — extra compact */
+  .room-chat-header {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  .room-chat-info h3 {
+    font-size: 13px;
+  }
+
+  .room-chat-actions {
+    gap: 3px;
+  }
+
+  .room-chat-header .btn-sm {
+    padding: 3px 6px;
+    font-size: 9px;
+    min-height: 26px;
+  }
+
+  /* Sidebar sections tighter */
+  .room-agent-sidebar {
+    max-height: 45vh;
+  }
+
+  .sidebar-section-toggle {
+    padding: 6px 10px;
+    font-size: 9px;
+  }
+
+  .room-thread-header {
+    padding: 6px 10px;
+  }
+
+  .room-composer {
+    padding: 6px 10px 8px;
+  }
+
+  .room-mention-menu {
+    left: 6px;
+    right: 6px;
   }
 
   /* Modal: full screen on small phones */
