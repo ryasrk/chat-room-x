@@ -1766,17 +1766,9 @@
   gap: 0;
 }
 
-/* Zoom toolbar */
+/* Zoom toolbar — hidden on desktop, shown on mobile via mobile.css */
 .live-zoom-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  padding: 6px 8px;
-  flex-shrink: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
-  border-radius: 10px 10px 0 0;
+  display: none;
 }
 
 .live-zoom-btn {
@@ -1827,33 +1819,33 @@
   color: var(--text-primary);
 }
 
-/* Zoom viewport: scrollable container for the scaled iframe */
+/* Zoom viewport: on desktop, just a simple container */
 .live-zoom-viewport {
   flex: 1;
   min-height: 0;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
   background: white;
   border-radius: 0 0 14px 14px;
   border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
   border-top: none;
 }
 
-/* Sizer: clips to the exact visual (scaled) dimensions of the iframe */
+/* Sizer: on desktop, takes full size naturally */
 .live-zoom-sizer {
+  width: 100%;
+  height: 100%;
   position: relative;
-  overflow: hidden;
   background: white;
 }
 
+/* Desktop: iframe fills its container naturally */
 .workspace-live-preview {
-  width: 1024px;
+  width: 100%;
   height: 100%;
   min-height: 560px;
   border: none;
+  border-radius: 18px;
   background: white;
-  transform-origin: top left;
-  display: block;
 }
 
 /* ── Fullscreen Preview Mode ─────────────────────────────────── */
@@ -1898,7 +1890,13 @@
   height: 100%;
 }
 
+.workspace-main.is-fullscreen .live-zoom-viewport {
+  border-radius: 0;
+  border: none;
+}
+
 .workspace-main.is-fullscreen .workspace-live-preview {
+  width: 100%;
   min-height: 100%;
   border: none;
   border-radius: 0;

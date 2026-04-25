@@ -1258,9 +1258,16 @@
     min-height: 0;
   }
 
-  /* Zoom toolbar: compact on mobile */
+  /* Zoom toolbar: visible on mobile */
   .live-zoom-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
     padding: 4px 6px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
     border-radius: 0;
   }
 
@@ -1282,12 +1289,21 @@
     border-radius: 0;
     border: none;
     touch-action: pan-x pan-y;
-    overflow: scroll;
+    overflow: auto;
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Sizer: on mobile, sized by JS to match visual dimensions */
+  .live-zoom-sizer {
+    overflow: hidden;
+  }
+
+  /* Iframe: sized by JS zoom logic on mobile */
   .workspace-live-preview {
+    width: 1024px;
+    border-radius: 0;
     touch-action: pan-x pan-y pinch-zoom;
+    transform-origin: top left;
   }
 
   /* Preview content */

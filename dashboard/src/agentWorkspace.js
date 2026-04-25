@@ -486,6 +486,9 @@ const ZOOM_STEPS = [25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200];
 const ZOOM_DEFAULT = 100;
 
 function _initLiveZoom(container) {
+  // Zoom controls only apply on mobile — desktop renders naturally at 100%
+  if (window.innerWidth > 768) return;
+
   let zoom = ZOOM_DEFAULT;
   const viewport = container.querySelector('.live-zoom-viewport');
   const iframe = container.querySelector('.workspace-live-preview');
