@@ -32,7 +32,7 @@ import { formatTokenCount, getAnalyticsSummary } from './tokenCounter.js';
 import { resolveModeModel } from './providerConfig.js';
 import { fetchEnowxProviderModels, pickPreferredProviderModel } from './providerModels.js';
 import { showToast } from './utils.js';
-import { persistDraft, loadDraft, clearDraft, persistSessionState, loadSessionState, showRecoveryBanner, clearSessionState } from './sessionRecovery.js';
+import { persistDraft, loadDraft, clearDraft, persistSessionState, loadSessionState, showRecoveryBanner, clearSessionState, loadAgentRoomState, clearAgentRoomState } from './sessionRecovery.js';
 import { renderObservabilityCards, recordLatency, recordError } from './observabilityPanel.js';
 
 // Side-effect imports — register their own DOM event listeners on load
@@ -526,6 +526,25 @@ if (savedSession?.conversationId && savedSession.wasStreaming) {
     if (session.conversationId) loadConversationById(session.conversationId);
     clearSessionState();
   }, () => clearSessionState());
+}
+
+// Agent Room auto-restore — reopen the last active agent room
+const savedAgentRoom = loadAgentRoomState();
+if (savedAgentRoom?.projectRoomId && isAuthenticated()) {
+  // Switch to Rooms tab and reopen the agent room
+  setTimeout(() => {
+    const roomsTab = document.querySelector('.nav-tab[data-view="rooms"]');
+    if (roomsTab) {
+      roomsTab.click();
+      // Wait for rooms list to load, then open the saved room
+      setTimeout(() => {
+        openAgentRoomChat(savedAgentRoom.projectRoomId).catch(() => {
+          // Room may have been deleted — clear stale state
+          clearAgentRoomState();
+        });
+      }, 500);
+    }
+  }, 300);
 }
 
 // Persist session state periodically and on unload

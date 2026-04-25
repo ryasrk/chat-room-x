@@ -142,3 +142,50 @@ export function showRecoveryBanner(sessionData, onRestore, onDismiss) {
 export function removeRecoveryBanner() {
   document.getElementById(RECOVERY_BANNER_ID)?.remove();
 }
+
+// ── Agent Room State Persistence ───────────────────────────────
+// Allows the user to return to an active agent room after closing the browser.
+
+const AGENT_ROOM_KEY = 'tenrary_agent_room_state';
+
+/**
+ * Save the currently open agent room so it can be restored on next visit.
+ * @param {string} projectRoomId - The project room ID
+ * @param {string} roomName - Display name
+ */
+export function persistAgentRoomState(projectRoomId, roomName) {
+  try {
+    localStorage.setItem(AGENT_ROOM_KEY, JSON.stringify({
+      projectRoomId,
+      roomName,
+      timestamp: Date.now(),
+    }));
+  } catch { /* ignore */ }
+}
+
+/**
+ * Load the previously open agent room state.
+ * Returns null if expired (>24h) or not found.
+ */
+export function loadAgentRoomState() {
+  try {
+    const raw = localStorage.getItem(AGENT_ROOM_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    // Expire after 24 hours
+    if (Date.now() - (data.timestamp || 0) > 86400_000) {
+      localStorage.removeItem(AGENT_ROOM_KEY);
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clear the persisted agent room state (e.g. when user leaves the room).
+ */
+export function clearAgentRoomState() {
+  try { localStorage.removeItem(AGENT_ROOM_KEY); } catch { /* ignore */ }
+}

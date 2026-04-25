@@ -747,6 +747,8 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
         status: 'started',
         timestamp: nowUnix(),
       });
+      // Persist start event so reconnecting clients know work is in progress
+      saveAgentRoomLog(roomId, agent.name, 'info', 'Started background work', { event: 'xb_start' });
 
       const result = await runReactiveAgentTurn({
         agent,
@@ -848,6 +850,12 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
       // ── Save memory and update status ─────────────────────
       saveAgentRoomMemory(roomId, agent.name, result.privateMemory);
       completeXbTask(roomId, agent.name, result.message?.slice(0, 100) || 'Done');
+      // Persist completion so reconnecting clients see the work finished
+      saveAgentRoomLog(roomId, agent.name, 'info', 'Background work completed', {
+        event: 'xb_complete',
+        tool_count: result.toolResults.length,
+        handoff_count: result.handoffs.length,
+      });
 
       this.emitRoomEvent(roomId, 'agent_room:xb_progress', {
         agent_name: agent.name,

@@ -39,6 +39,7 @@ import { clearAllTypingIndicators } from './agentTypingIndicator.js';
 import { loadSnapshots, clearSnapshots, renderSnapshotSection } from './agentSnapshots.js';
 import { loadSkills, clearSkills, renderSkillSection } from './agentSkills.js';
 import { showOverflowMenu, closeOverflowMenu } from './overflowMenu.js';
+import { persistAgentRoomState, clearAgentRoomState } from './sessionRecovery.js';
 
 // ── Rooms Panel (sidebar-like list) ────────────────────────────
 
@@ -1084,6 +1085,9 @@ export async function openAgentRoomChat(projectRoomId) {
     const data = await getProjectAgentRoomDetails(projectRoomId);
     rs.currentAgentRoomId = data.room?.id || null;
 
+    // Persist room state so user can return after closing the browser
+    persistAgentRoomState(projectRoomId, data.room?.name || 'AI Agent Room');
+
     const nameEl = rs.panel?.querySelector('#room-chat-name');
     const membersEl = rs.panel?.querySelector('#room-chat-members');
     const inputEl = rs.panel?.querySelector('#room-input');
@@ -1144,6 +1148,16 @@ export async function openAgentRoomChat(projectRoomId) {
       if (msg.event_type === 'handoff' && msg.sender_type === 'agent') {
         extractHandoffsFromMessage(msg);
       }
+    }
+
+    // Show active background work status (agents still working after browser was closed)
+    const activeWork = data.activeWork || [];
+    if (activeWork.length > 0) {
+      const workingAgents = activeWork.map((w) => `@${w.agentName}`).join(', ');
+      showToast(`🔄 ${workingAgents} still working in background`, 'info', 5000);
+      // Show the stop button since work is in progress
+      const stopBtn = rs.panel?.querySelector('#room-stop-btn');
+      if (stopBtn) stopBtn.hidden = false;
     }
 
     await refreshAgentFiles();
@@ -1239,6 +1253,7 @@ export function closeRoomChat() {
   if (roomBots) { roomBots.hidden = true; roomBots.classList.remove('mobile-expanded'); roomBots.innerHTML = ''; }
   hideMentionMenu();
   closeOverflowMenu();
+  clearAgentRoomState();
   applyActiveRoomCard();
 }
 

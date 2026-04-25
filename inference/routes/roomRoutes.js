@@ -14,6 +14,7 @@ import {
 } from '../db/database.js';
 import { ensureProjectAgentRoom } from '../agentRoom/projectRoomLink.js';
 import { listAgentRoomAgents, listAgentRoomLogs, listAgentRoomMessages, listAgentRoomTasks } from '../db/database.js';
+import { getActiveXbTasks } from '../agentRoom/progressStore.js';
 import { sendJson, readBody } from './apiRouter.js';
 
 /** Generate a weak ETag from message count + last message timestamp */
@@ -168,12 +169,21 @@ export async function handleRoomRoute(path, url, req, res) {
 
     try {
       const agentRoom = await ensureProjectAgentRoom(projectRoom);
+      const activeTasks = getActiveXbTasks(agentRoom.id);
       sendJson(res, 200, {
         room: sanitizeLinkedAgentRoom(agentRoom),
         agents: listAgentRoomAgents(agentRoom.id),
         messages: listAgentRoomMessages(agentRoom.id, 100),
         logs: listAgentRoomLogs(agentRoom.id, 100),
         tasks: listAgentRoomTasks(agentRoom.id),
+        activeWork: activeTasks.map((t) => ({
+          agentName: t.agentName,
+          status: t.progress.status,
+          step: t.progress.step,
+          toolCalls: t.progress.toolCalls.length,
+          startedAt: t.progress.startedAt,
+          updatedAt: t.progress.updatedAt,
+        })),
       });
     } catch (err) {
       console.error('[agent-room] Failed to open AI Agent room:', err);
