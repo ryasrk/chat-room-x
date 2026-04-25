@@ -1123,14 +1123,10 @@
     padding: 4px;
   }
 
-  /* Accordion: ensure open state shows content */
+  /* Accordion: contained within sidebar scroll */
   .sidebar-accordion {
     border-radius: 10px;
-    overflow: visible;
-  }
-
-  .sidebar-accordion[open] {
-    overflow: visible;
+    overflow: hidden;
   }
 
   .sidebar-accordion-header {
@@ -1141,13 +1137,6 @@
 
   .sidebar-accordion-body {
     padding: 0 4px 4px;
-    overflow: visible;
-    max-height: none;
-  }
-
-  /* File list scrolls within the sidebar */
-  .workspace-file-list {
-    max-height: none;
   }
 
   .sidebar-search-input {
