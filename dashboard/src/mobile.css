@@ -1713,12 +1713,12 @@
 
   /* Workspace view tighter */
   .workspace-body {
-    padding: 8px;
-    gap: 8px;
+    padding: 0;
+    gap: 0;
   }
 
   .workspace-sidebar {
-    max-height: 35vh;
+    max-height: 30vh;
   }
 
   /* Modal: full screen on small phones */
