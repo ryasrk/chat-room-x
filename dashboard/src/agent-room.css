@@ -1839,6 +1839,13 @@
   border-top: none;
 }
 
+/* Sizer: clips to the exact visual (scaled) dimensions of the iframe */
+.live-zoom-sizer {
+  position: relative;
+  overflow: hidden;
+  background: white;
+}
+
 .workspace-live-preview {
   width: 1024px;
   height: 100%;
@@ -1846,6 +1853,7 @@
   border: none;
   background: white;
   transform-origin: top left;
+  display: block;
 }
 
 /* ── Fullscreen Preview Mode ─────────────────────────────────── */

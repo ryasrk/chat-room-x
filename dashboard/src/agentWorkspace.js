@@ -492,25 +492,49 @@ function _initLiveZoom(container) {
   const levelBtn = container.querySelector('.live-zoom-level');
   if (!viewport || !iframe) return;
 
+  // Wrap iframe in a sizer div that clips to the visual (scaled) dimensions.
+  // This prevents the scroll area from extending beyond the visible content.
+  let sizer = viewport.querySelector('.live-zoom-sizer');
+  if (!sizer) {
+    sizer = document.createElement('div');
+    sizer.className = 'live-zoom-sizer';
+    iframe.parentNode.insertBefore(sizer, iframe);
+    sizer.appendChild(iframe);
+  }
+
   function applyZoom(newZoom) {
     zoom = Math.max(ZOOM_STEPS[0], Math.min(ZOOM_STEPS[ZOOM_STEPS.length - 1], newZoom));
     const scale = zoom / 100;
     const vpWidth = viewport.clientWidth || 375;
     const vpHeight = viewport.clientHeight || 600;
 
-    // The iframe renders at a CSS width, then scale() shrinks/grows it visually.
-    // We want: visual width = max(viewport, 1024 * scale)
-    // So: iframe CSS width = visual width / scale
-    // When zoomed out (scale < 1): page fits viewport → no horizontal scroll
-    // When zoomed in (scale > 1): page overflows → horizontal scroll appears
-    const visualWidth = Math.max(vpWidth, 1024 * scale);
-    const iframeWidth = visualWidth / scale;
+    // Iframe renders at 1024px CSS width (desktop layout).
+    // scale() shrinks/grows it visually.
+    const iframeWidth = 1024;
     const iframeHeight = Math.max(800, vpHeight / scale);
 
+    // Visual dimensions after scaling
+    const visualWidth = iframeWidth * scale;
+    const visualHeight = iframeHeight * scale;
+
+    // Set iframe to its natural render width
     iframe.style.transform = `scale(${scale})`;
     iframe.style.transformOrigin = 'top left';
     iframe.style.width = `${iframeWidth}px`;
     iframe.style.height = `${iframeHeight}px`;
+
+    // Sizer clips to exact visual size — no white space beyond content
+    sizer.style.width = `${visualWidth}px`;
+    sizer.style.height = `${visualHeight}px`;
+    sizer.style.overflow = 'hidden';
+
+    // When zoomed out and content fits viewport, disable horizontal scroll
+    if (visualWidth <= vpWidth) {
+      viewport.style.overflowX = 'hidden';
+    } else {
+      viewport.style.overflowX = 'auto';
+    }
+
     if (levelBtn) levelBtn.textContent = `${zoom}%`;
   }
 
