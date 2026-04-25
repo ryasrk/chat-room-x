@@ -50,7 +50,7 @@ export function extractWorkspaceHtmlAssetRefs(htmlContent) {
 
 export function buildWorkspaceHtmlPreviewDocument({ htmlContent, styles = new Map(), scripts = new Map() }) {
   let documentHtml = String(htmlContent || '');
-  const cspMeta = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; base-uri \'none\'; form-action \'none\'; connect-src \'none\'; img-src data: blob:; style-src \'unsafe-inline\'; script-src \'unsafe-inline\' \'unsafe-eval\'; font-src data: blob:; media-src data: blob:; frame-ancestors \'none\'">';
+  const cspMeta = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; base-uri \'none\'; form-action \'self\'; connect-src https: http:; img-src data: blob: https: http:; style-src \'unsafe-inline\' https://fonts.googleapis.com; style-src-elem \'unsafe-inline\' https://fonts.googleapis.com; script-src \'unsafe-inline\' \'unsafe-eval\' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; font-src data: blob: https://fonts.gstatic.com; media-src data: blob: https: http:">';
 
   for (const [ref, content] of styles.entries()) {
     const escapedRef = ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

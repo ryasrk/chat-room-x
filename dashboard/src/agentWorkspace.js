@@ -346,6 +346,14 @@ export async function openAgentFile(path) {
     rs.agentRoomFileContent = normalizeWorkspaceFileContentResponse(data);
     await refreshSelectedAgentFileReview();
     await renderAgentFilePreview();
+
+    // On mobile, scroll the preview into view so user sees the content
+    if (window.innerWidth <= 768) {
+      const previewHeader = rs.panel?.querySelector('.workspace-preview-header');
+      if (previewHeader) {
+        previewHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
   } catch (err) {
     previews.forEach((preview) => {
       preview.innerHTML = `<div class="file-preview-state file-preview-state-error">Error: ${escapeHtml(err.message)}</div>`;
@@ -488,7 +496,7 @@ async function renderAgentFilePreview() {
   if (rs.agentRoomPreviewMode === 'live' && isHtmlWorkspaceFile(path) && content) {
     const previewDoc = await buildLivePreviewDocument(path, content);
     previews.forEach((preview) => {
-      preview.innerHTML = '<div class="workspace-live-shell"><iframe class="workspace-live-preview" sandbox="allow-scripts"></iframe></div>';
+      preview.innerHTML = '<div class="workspace-live-shell"><iframe class="workspace-live-preview" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-same-origin" referrerpolicy="no-referrer"></iframe></div>';
       const iframe = preview.querySelector('.workspace-live-preview');
       if (iframe) {
         iframe.srcdoc = previewDoc;
@@ -662,6 +670,20 @@ export function handleArtifactsClick() {
   rs.agentRoomSelectedTab = 'workspace';
   showWorkspacePanel();
   refreshAgentFiles();
+
+  // Ensure Files accordion is open and others are collapsed on mobile
+  if (window.innerWidth <= 768) {
+    const sidebar = rs.panel?.querySelector('.workspace-sidebar');
+    if (sidebar) {
+      sidebar.querySelectorAll('.sidebar-accordion').forEach((acc, i) => {
+        if (i === 0) {
+          acc.setAttribute('open', '');
+        } else {
+          acc.removeAttribute('open');
+        }
+      });
+    }
+  }
 }
 
 export function showAgentSidebar(show) {
