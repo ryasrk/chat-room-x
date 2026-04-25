@@ -262,6 +262,39 @@ summary:focus-visible {
   margin: 4px 8px;
 }
 
+/* ── Workspace Tab Bar (mobile only) ────────────── */
+.workspace-tab-bar {
+  display: none; /* Hidden on desktop — both panels visible side-by-side */
+}
+
+.workspace-tab {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  text-align: center;
+}
+
+.workspace-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.workspace-tab:hover {
+  color: var(--text-primary);
+}
+
+/* Desktop: panel-hidden class has no effect */
+.workspace-panel-hidden {
+  /* no-op on desktop */
+}
+
 /* ── View Panels ────────────────────────────────── */
 .view-panel {
   display: flex;

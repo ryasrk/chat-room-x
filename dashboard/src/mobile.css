@@ -1047,6 +1047,24 @@
     overflow: hidden;
   }
 
+  /* ── Workspace Tab Bar: visible on mobile ── */
+  .workspace-tab-bar {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+  }
+
+  .workspace-tab {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  /* Hide inactive panel on mobile */
+  .workspace-panel-hidden {
+    display: none !important;
+  }
+
   /* ── Workspace Header: compact, override room-chat-header squeeze ── */
   .room-workspace-header {
     max-height: none !important;
@@ -1083,7 +1101,7 @@
     white-space: nowrap;
   }
 
-  /* ── Workspace Body: single column, scrollable ── */
+  /* ── Workspace Body: flex column, each panel takes full space ── */
   .workspace-body {
     display: flex !important;
     flex-direction: column;
@@ -1091,18 +1109,18 @@
     padding: 0;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ── File Sidebar: full height in its own tab ── */
+  .workspace-sidebar {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-  }
-
-  /* ── File Sidebar: natural height, scrolls with body ── */
-  .workspace-sidebar {
-    max-height: none;
-    overflow: visible;
-    border-bottom: 1px solid var(--border);
+    border-bottom: none;
     padding: 4px;
-    flex-shrink: 0;
   }
 
   /* Accordion: ensure open state shows content */
@@ -1127,11 +1145,9 @@
     max-height: none;
   }
 
-  /* Limit file list height so it doesn't push preview off-screen */
+  /* File list scrolls within the sidebar */
   .workspace-file-list {
-    max-height: 40vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    max-height: none;
   }
 
   .sidebar-search-input {
@@ -1162,12 +1178,14 @@
     font-size: 9px;
   }
 
-  /* ── Preview Main: full-bleed ── */
+  /* ── Preview Main: full-bleed, takes full tab height ── */
   .workspace-main {
     border-radius: 0;
     border: none;
     box-shadow: none;
+    flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
 
   /* Preview header: stack vertically */
@@ -1921,10 +1939,6 @@
 
   .workspace-sidebar {
     max-height: none;
-  }
-
-  .workspace-file-list {
-    max-height: 35vh;
   }
 
   /* Modal: full screen on small phones */

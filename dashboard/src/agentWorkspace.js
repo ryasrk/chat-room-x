@@ -347,12 +347,10 @@ export async function openAgentFile(path) {
     await refreshSelectedAgentFileReview();
     await renderAgentFilePreview();
 
-    // On mobile, scroll the preview into view so user sees the content
+    // On mobile, switch to the Preview tab so user sees the content
     if (window.innerWidth <= 768) {
-      const previewHeader = rs.panel?.querySelector('.workspace-preview-header');
-      if (previewHeader) {
-        previewHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      const { switchWorkspaceTab } = await import('./roomsUI.js');
+      switchWorkspaceTab('preview');
     }
   } catch (err) {
     previews.forEach((preview) => {
@@ -666,13 +664,16 @@ export async function handleDownloadWorkspace() {
   }
 }
 
-export function handleArtifactsClick() {
+export async function handleArtifactsClick() {
   rs.agentRoomSelectedTab = 'workspace';
   showWorkspacePanel();
   refreshAgentFiles();
 
-  // Ensure Files accordion is open and others are collapsed on mobile
+  // On mobile, start on Files tab and ensure Files accordion is open
   if (window.innerWidth <= 768) {
+    const { switchWorkspaceTab } = await import('./roomsUI.js');
+    switchWorkspaceTab('files');
+
     const sidebar = rs.panel?.querySelector('.workspace-sidebar');
     if (sidebar) {
       sidebar.querySelectorAll('.sidebar-accordion').forEach((acc, i) => {

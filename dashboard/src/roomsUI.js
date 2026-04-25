@@ -270,7 +270,12 @@ export function createRoomsView() {
         </div>
       </div>
       <div class="workspace-body">
-        <div class="workspace-sidebar">
+        <!-- Mobile tab switcher (hidden on desktop via CSS) -->
+        <div class="workspace-tab-bar" role="tablist" aria-label="Workspace view">
+          <button class="workspace-tab active" data-workspace-tab="files" role="tab" aria-selected="true">📁 Files</button>
+          <button class="workspace-tab" data-workspace-tab="preview" role="tab" aria-selected="false">👁 Preview</button>
+        </div>
+        <div class="workspace-sidebar" data-workspace-panel="files">
           <details class="sidebar-accordion" open>
             <summary class="sidebar-accordion-header">
               <span class="sidebar-accordion-icon">
@@ -307,7 +312,7 @@ export function createRoomsView() {
           <details class="sidebar-accordion" id="agent-room-snapshots"></details>
           <details class="sidebar-accordion" id="agent-room-skills"></details>
         </div>
-        <div class="workspace-main">
+        <div class="workspace-main" data-workspace-panel="preview">
           <div class="workspace-preview-header">
             <div class="workspace-preview-title-group">
               <div class="workspace-preview-title-row">
@@ -769,6 +774,13 @@ export function initRoomsUI() {
       if (roomChat) roomChat.hidden = false;
     });
   }
+
+  // ── Workspace mobile tab switcher ──────────────────────────────
+  rs.panel.querySelectorAll('.workspace-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      switchWorkspaceTab(tab.dataset.workspaceTab);
+    });
+  });
 
   // File search filter
   const fileSearchInput = rs.panel.querySelector('#sidebar-file-search');
@@ -1272,6 +1284,26 @@ export function closeRoomChat() {
   closeOverflowMenu();
   clearAgentRoomState();
   applyActiveRoomCard();
+}
+
+/**
+ * Switch between Files and Preview tabs in the workspace (mobile only).
+ * On desktop this is a no-op since both panels are always visible.
+ */
+export function switchWorkspaceTab(tabName) {
+  if (!rs.panel) return;
+  const tabs = rs.panel.querySelectorAll('.workspace-tab');
+  const panels = rs.panel.querySelectorAll('[data-workspace-panel]');
+
+  tabs.forEach((tab) => {
+    const isActive = tab.dataset.workspaceTab === tabName;
+    tab.classList.toggle('active', isActive);
+    tab.setAttribute('aria-selected', String(isActive));
+  });
+
+  panels.forEach((panel) => {
+    panel.classList.toggle('workspace-panel-hidden', panel.dataset.workspacePanel !== tabName);
+  });
 }
 
 export function cleanupRooms() {
