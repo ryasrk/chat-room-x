@@ -1179,7 +1179,7 @@
     box-shadow: none;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: auto;
   }
 
   /* Preview header: stack vertically */
@@ -1248,14 +1248,27 @@
     padding: 8px;
   }
 
-  .file-preview-code,
-  .file-preview-markdown {
+  /* Code: horizontal scroll, no word wrap */
+  .file-preview-code {
     padding: 10px;
     border-radius: 10px;
     font-size: 12px;
     line-height: 1.6;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: pre;
+    word-break: normal;
+  }
+
+  /* Markdown: wrap text naturally */
+  .file-preview-markdown {
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
     word-break: break-word;
+    overflow-x: hidden;
   }
 
   .workspace-empty-state,
