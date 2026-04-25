@@ -1036,23 +1036,71 @@
     text-align: center;
   }
 
-  /* ── Workspace View (Artifacts) ──────────────── */
+  /* ══════════════════════════════════════════════
+     WORKSPACE / ARTIFACTS VIEW — Mobile
+     ══════════════════════════════════════════════ */
   .room-workspace {
     display: flex;
     flex-direction: column;
     height: 100%;
     min-height: 0;
+    overflow: hidden;
   }
 
+  /* ── Workspace Header: compact, override room-chat-header squeeze ── */
+  .room-workspace-header {
+    max-height: none !important;
+    overflow: visible !important;
+    flex-wrap: nowrap !important;
+    padding: 8px 10px !important;
+    gap: 8px !important;
+    min-height: 48px;
+  }
+
+  .room-workspace-header .workspace-eyebrow {
+    display: none; /* Hide "ARTIFACTS" label — redundant */
+  }
+
+  .room-workspace-title h3 {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .room-workspace-title .room-member-count {
+    display: none; /* Hide verbose description on mobile */
+  }
+
+  .room-workspace-header .room-chat-actions {
+    flex-shrink: 0;
+    width: auto !important;
+  }
+
+  .room-workspace-header .btn-sm {
+    font-size: 11px;
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+
+  /* ── Workspace Body: single column, no gaps ── */
   .workspace-body {
     grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 10px;
+    gap: 0;
+    padding: 0;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
+  /* ── File Sidebar: compact, limited height ── */
   .workspace-sidebar {
-    max-height: 40vh;
+    max-height: 35vh;
     overflow-y: auto;
+    border-bottom: 1px solid var(--border);
+    padding: 4px;
+    scrollbar-width: thin;
   }
 
   .sidebar-accordion {
@@ -1060,31 +1108,125 @@
   }
 
   .sidebar-accordion-header {
+    padding: 10px 12px;
+    font-size: 12px;
+    min-height: 44px;
+  }
+
+  .sidebar-accordion-body {
+    padding: 0 4px 4px;
+  }
+
+  .sidebar-search-input {
+    font-size: 16px !important; /* prevent iOS zoom */
     padding: 8px 12px;
+    min-height: 40px;
+    border-radius: 10px;
+  }
+
+  /* File items: touch-friendly */
+  .agent-file-item,
+  .agent-room-file-item {
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    gap: 10px;
+  }
+
+  .agent-file-name {
+    font-size: 13px;
+  }
+
+  .agent-file-path {
     font-size: 11px;
   }
 
-  .workspace-eyebrow {
+  .agent-file-author {
+    font-size: 9px;
+  }
+
+  /* ── Preview Main: full-bleed ── */
+  .workspace-main {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    min-height: 0;
+  }
+
+  /* Preview header: stack vertically */
+  .workspace-preview-header {
+    padding: 10px 12px 8px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .workspace-preview-header h4 {
+    font-size: 13px;
+    white-space: normal;
+    word-break: break-all;
+  }
+
+  .workspace-preview-header p {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .workspace-preview-title-row {
+    gap: 8px;
+  }
+
+  /* Preview action buttons: horizontal scroll */
+  .workspace-preview-actions {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    justify-content: flex-start;
+    padding-bottom: 2px;
+  }
+
+  .workspace-preview-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .workspace-preview-actions .btn-sm {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 6px 10px;
+    min-height: 32px;
+    white-space: nowrap;
+    border-radius: 8px;
+  }
+
+  /* Review row */
+  .workspace-review-row {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .workspace-review-badge {
     font-size: 10px;
   }
 
-  .room-workspace-title h3 {
-    font-size: 14px;
-  }
-
-  .room-workspace-title .room-member-count {
+  .workspace-review-meta {
     font-size: 10px;
   }
 
+  /* Preview content */
   .file-preview-content {
-    padding: 10px;
+    padding: 8px;
   }
 
   .file-preview-code,
   .file-preview-markdown {
-    padding: 12px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 10px;
     font-size: 12px;
+    line-height: 1.6;
+    overflow-x: auto;
+    word-break: break-word;
   }
 
   .workspace-empty-state,
@@ -1093,6 +1235,11 @@
     padding: 14px;
     border-radius: 14px;
     font-size: 12px;
+  }
+
+  /* Workspace progress list items */
+  .workspace-progress-list {
+    padding: 4px 8px;
   }
 
   /* ── Agent Typing Indicator ─────────────────── */
