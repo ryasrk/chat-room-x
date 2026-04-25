@@ -86,6 +86,7 @@ const apiEndpointInput = $('#api-endpoint');
 const providerModelInput = $('#provider-model');
 const userLanguageSelect = $('#user-language');
 const userTimezoneSelect = $('#user-timezone');
+const restartGatewayBtn = $('#restart-gateway-btn');
 const plusBtn = $('#plus-btn');
 const plusMenu = $('#plus-menu');
 const reasoningToggleBtn = $('#reasoning-toggle-btn');
@@ -234,6 +235,42 @@ apiEndpointInput.addEventListener('change', () => { state.settings.apiEndpoint =
 providerModelInput?.addEventListener('change', () => { state.settings.model = providerModelInput.value; });
 userLanguageSelect.addEventListener('change', () => { state.settings.language = userLanguageSelect.value; updateLocalePreview(); });
 userTimezoneSelect.addEventListener('change', () => { state.settings.timezone = userTimezoneSelect.value; updateLocalePreview(); });
+
+// ── Restart Gateway Button ─────────────────────────────────────
+if (restartGatewayBtn) {
+  restartGatewayBtn.addEventListener('click', async () => {
+    const originalText = restartGatewayBtn.textContent;
+    const originalDisabled = restartGatewayBtn.disabled;
+    
+    try {
+      restartGatewayBtn.disabled = true;
+      restartGatewayBtn.textContent = '⏳ Restarting...';
+      
+      const response = await fetch('/restart-gateway', { 
+        method: 'POST',
+        signal: AbortSignal.timeout(30000)
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast('Gateway restart initiated. Reconnecting...', 'success');
+        // Give the gateway time to restart
+        setTimeout(() => {
+          connMgr.setState('reconnecting');
+          connMgr.startHealthPolling('/manager/health', 10000);
+        }, 1500);
+      } else {
+        showToast(data.error || 'Failed to restart gateway', 'error');
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to restart gateway', 'error');
+    } finally {
+      restartGatewayBtn.textContent = originalText;
+      restartGatewayBtn.disabled = originalDisabled;
+    }
+  });
+}
 
 // ── Shortcuts Modal ────────────────────────────────────────────
 function openShortcutsModal(trigger = shortcutsBtn) {

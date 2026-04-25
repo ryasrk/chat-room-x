@@ -9,6 +9,20 @@
 .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-light); }
 .btn-secondary:hover { background: var(--bg-hover); }
 .btn-danger { background: #ef4444; color: white; }
+.btn-restart-gateway {
+  width: 100%; padding: 0.75rem 1rem; border-radius: 6px;
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  color: white; font-weight: 600; cursor: pointer;
+  border: none; transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+.btn-restart-gateway:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+}
+.btn-restart-gateway:disabled {
+  opacity: 0.6; cursor: not-allowed;
+}
 
 .input, .textarea {
   width: 100%; padding: 0.75rem; border-radius: 6px;

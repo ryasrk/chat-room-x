@@ -12,6 +12,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from 'redis';
 import { WebSocketServer } from 'ws';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
 import { buildCacheKey, CACHE_TTLS, RequestCache, shouldCacheRequest } from './requestCache.js';
 import { sendCompressedJson } from './compression.js';
@@ -44,6 +46,77 @@ const SUPPORTED_PROXY_POST_PATHS = new Set(['/v1/chat/completions', '/v1/respons
 // ── JSON response helper (compressed for large payloads) ──────
 function sendJson(req, res, statusCode, data, extraHeaders = {}) {
   return sendCompressedJson(req, res, statusCode, data, extraHeaders);
+}
+
+// ── Gateway Restart Helper ─────────────────────────────────────
+const execAsync = promisify(exec);
+
+async function restartEnowxaiGateway() {
+  const steps = [];
+
+  try {
+    // Step 1: enowxai stop
+    console.log('[restart-gateway] Step 1/3 — enowxai stop...');
+    try {
+      const { stdout, stderr } = await execAsync('enowxai stop', { timeout: 10000 });
+      console.log('[restart-gateway] enowxai stop completed');
+      if (stdout?.trim()) console.log('[restart-gateway] stdout:', stdout.trim());
+      steps.push({ step: 'enowxai stop', status: 'ok' });
+    } catch (stopErr) {
+      console.warn('[restart-gateway] enowxai stop warning:', stopErr.message);
+      steps.push({ step: 'enowxai stop', status: 'warning', detail: stopErr.message });
+      // Continue — we'll force-kill next
+    }
+
+    // Step 2: Kill port 1431 PID
+    console.log('[restart-gateway] Step 2/3 — killing port 1431 PID...');
+    try {
+      const { stdout: pids } = await execAsync('lsof -ti:1431 2>/dev/null || true');
+      const pidList = pids.trim().split('\n').filter(Boolean);
+
+      if (pidList.length > 0) {
+        await execAsync(`lsof -ti:1431 | xargs kill -9 2>/dev/null || true`);
+        console.log(`[restart-gateway] Killed PIDs on port 1431: ${pidList.join(', ')}`);
+        steps.push({ step: 'kill port 1431', status: 'ok', pids: pidList });
+      } else {
+        console.log('[restart-gateway] No process found on port 1431');
+        steps.push({ step: 'kill port 1431', status: 'ok', detail: 'no process on port' });
+      }
+    } catch (killErr) {
+      console.warn('[restart-gateway] Kill port 1431 warning:', killErr.message);
+      steps.push({ step: 'kill port 1431', status: 'warning', detail: killErr.message });
+    }
+
+    // Wait for port to be released
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Step 3: enowxai start
+    console.log('[restart-gateway] Step 3/3 — enowxai start...');
+    try {
+      const { stdout, stderr } = await execAsync('enowxai start', { timeout: 15000 });
+      console.log('[restart-gateway] enowxai start completed');
+      if (stdout?.trim()) console.log('[restart-gateway] stdout:', stdout.trim());
+      if (stderr && !stderr.includes('already') && !stderr.includes('Starting')) {
+        console.warn('[restart-gateway] startup stderr:', stderr.trim());
+      }
+      steps.push({ step: 'enowxai start', status: 'ok' });
+    } catch (startErr) {
+      console.error('[restart-gateway] enowxai start failed:', startErr.message);
+      steps.push({ step: 'enowxai start', status: 'error', detail: startErr.message });
+      throw new Error(`enowxai start failed: ${startErr.message}`);
+    }
+
+    console.log('[restart-gateway] Gateway restart completed successfully');
+    return {
+      status: 'success',
+      message: 'EnowxAI gateway restarted (stop → kill 1431 → start)',
+      steps,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[restart-gateway] Error:', message);
+    throw new Error(`Failed to restart gateway: ${message}`);
+  }
 }
 
 // ── Keep-Alive Agents (reuse TCP connections to cloud providers) ──
@@ -858,6 +931,23 @@ const controlServer = createServer(async (req, res) => {
     deactivateProvider();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ status: 'stopped' }));
+  }
+
+  // POST /restart-gateway
+  if (url.pathname === '/restart-gateway' && req.method === 'POST') {
+    if (!isAuthorizedMutation(req)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'Forbidden' }));
+    }
+
+    try {
+      const result = await restartEnowxaiGateway();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(result));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: err.message }));
+    }
   }
 
   // POST /manager/chat/sse — SSE fallback for WebSocket
