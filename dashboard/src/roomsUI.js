@@ -269,12 +269,12 @@ export function createRoomsView() {
           <button id="workspace-download-btn" class="btn-sm btn-secondary" title="Download Workspace">Download ZIP</button>
         </div>
       </div>
+      <!-- Mobile tab switcher (between header and body, hidden on desktop) -->
+      <div class="workspace-tab-bar" role="tablist" aria-label="Workspace view">
+        <button class="workspace-tab active" data-workspace-tab="files" role="tab" aria-selected="true">📁 Files</button>
+        <button class="workspace-tab" data-workspace-tab="preview" role="tab" aria-selected="false">👁 Preview</button>
+      </div>
       <div class="workspace-body">
-        <!-- Mobile tab switcher (hidden on desktop via CSS) -->
-        <div class="workspace-tab-bar" role="tablist" aria-label="Workspace view">
-          <button class="workspace-tab active" data-workspace-tab="files" role="tab" aria-selected="true">📁 Files</button>
-          <button class="workspace-tab" data-workspace-tab="preview" role="tab" aria-selected="false">👁 Preview</button>
-        </div>
         <div class="workspace-sidebar" data-workspace-panel="files">
           <details class="sidebar-accordion" open>
             <summary class="sidebar-accordion-header">
@@ -768,6 +768,15 @@ export function initRoomsUI() {
   const workspaceBack = rs.panel.querySelector('#workspace-back-btn');
   if (workspaceBack) {
     workspaceBack.addEventListener('click', () => {
+      // On mobile: if on Preview tab, go back to Files tab first
+      if (window.innerWidth <= 768) {
+        const previewTab = rs.panel.querySelector('.workspace-tab[data-workspace-tab="preview"]');
+        if (previewTab?.classList.contains('active')) {
+          switchWorkspaceTab('files');
+          return;
+        }
+      }
+      // Otherwise go back to chat
       const workspaceView = rs.panel.querySelector('#room-workspace');
       const roomChat = rs.panel.querySelector('#room-chat');
       if (workspaceView) workspaceView.hidden = true;
