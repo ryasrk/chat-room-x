@@ -42,24 +42,30 @@ export function showOverflowMenu(trigger, items) {
     menu.appendChild(btn);
   });
 
-  // Position relative to trigger
-  trigger.style.position = 'relative';
-  trigger.parentElement.style.position = 'relative';
-  trigger.parentElement.appendChild(menu);
+  // Append to body with fixed positioning to avoid overflow:hidden clipping
+  document.body.appendChild(menu);
 
-  // Ensure menu is visible within viewport
+  // Position below the trigger button
   requestAnimationFrame(() => {
-    const rect = menu.getBoundingClientRect();
-    if (rect.right > window.innerWidth) {
-      menu.style.right = '0';
-      menu.style.left = 'auto';
+    const triggerRect = trigger.getBoundingClientRect();
+    let top = triggerRect.bottom + 4;
+    let left = triggerRect.right - menu.offsetWidth;
+
+    // Keep within viewport horizontally
+    if (left < 8) left = 8;
+    if (left + menu.offsetWidth > window.innerWidth - 8) {
+      left = window.innerWidth - menu.offsetWidth - 8;
     }
-    if (rect.bottom > window.innerHeight) {
-      menu.style.bottom = '100%';
-      menu.style.top = 'auto';
-      menu.style.marginBottom = '4px';
-      menu.style.marginTop = '0';
+
+    // If menu would overflow bottom, show above trigger instead
+    if (top + menu.offsetHeight > window.innerHeight - 8) {
+      top = triggerRect.top - menu.offsetHeight - 4;
     }
+
+    menu.style.position = 'fixed';
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
+    menu.style.right = 'auto';
   });
 
   _activeMenu = menu;
