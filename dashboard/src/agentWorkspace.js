@@ -495,11 +495,22 @@ function _initLiveZoom(container) {
   function applyZoom(newZoom) {
     zoom = Math.max(ZOOM_STEPS[0], Math.min(ZOOM_STEPS[ZOOM_STEPS.length - 1], newZoom));
     const scale = zoom / 100;
+    const vpWidth = viewport.clientWidth || 375;
+    const vpHeight = viewport.clientHeight || 600;
+
+    // The iframe renders at a CSS width, then scale() shrinks/grows it visually.
+    // We want: visual width = max(viewport, 1024 * scale)
+    // So: iframe CSS width = visual width / scale
+    // When zoomed out (scale < 1): page fits viewport → no horizontal scroll
+    // When zoomed in (scale > 1): page overflows → horizontal scroll appears
+    const visualWidth = Math.max(vpWidth, 1024 * scale);
+    const iframeWidth = visualWidth / scale;
+    const iframeHeight = Math.max(800, vpHeight / scale);
+
     iframe.style.transform = `scale(${scale})`;
     iframe.style.transformOrigin = 'top left';
-    // Adjust viewport scroll area to match scaled iframe size
-    iframe.style.width = `${1024 / scale}px`;
-    iframe.style.height = `${Math.max(800, viewport.clientHeight) / scale}px`;
+    iframe.style.width = `${iframeWidth}px`;
+    iframe.style.height = `${iframeHeight}px`;
     if (levelBtn) levelBtn.textContent = `${zoom}%`;
   }
 
