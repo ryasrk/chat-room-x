@@ -43,6 +43,7 @@ export function resetAgentRoomSidebar() {
   rs.agentRoomProgressTimeline = [];
   rs.agentRoomWorkspaceFiles = [];
   rs.sidebarCollapsed = false;
+  rs._sidebarManuallyOpened = false;
   renderConnectionState();
   renderAgentLogs();
   renderAgentFiles();
@@ -688,13 +689,20 @@ export function showAgentSidebar(show) {
     return;
   }
 
-  sidebar.classList.toggle('collapsed', rs.sidebarCollapsed);
-  toggle.setAttribute('aria-expanded', String(!rs.sidebarCollapsed));
-  toggle.querySelector('.sidebar-toggle-icon').textContent = rs.sidebarCollapsed ? '▶' : '◀';
+  // On mobile (≤768px), always start collapsed so chat gets full height.
+  // User can expand via the toggle button.
+  const isMobile = window.innerWidth <= 768;
+  const collapsed = isMobile ? !rs._sidebarManuallyOpened : rs.sidebarCollapsed;
+
+  sidebar.classList.toggle('collapsed', collapsed);
+  toggle.setAttribute('aria-expanded', String(!collapsed));
+  toggle.querySelector('.sidebar-toggle-icon').textContent = collapsed ? '▶' : '◀';
 }
 
 export function toggleAgentSidebar() {
   rs.sidebarCollapsed = !rs.sidebarCollapsed;
+  // Track that user manually toggled on mobile
+  rs._sidebarManuallyOpened = !rs.sidebarCollapsed;
   showAgentSidebar(true);
 }
 

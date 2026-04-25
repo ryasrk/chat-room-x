@@ -258,7 +258,7 @@
     box-shadow: none;
   }
 
-  /* ── Phase 1: Room Header — Overflow Menu ──── */
+  /* ═══ ROOM HEADER — Mobile Compact ═══════════ */
   /* Hide secondary actions on mobile, show overflow trigger */
   .room-action-secondary {
     display: none !important;
@@ -273,25 +273,27 @@
     letter-spacing: 1px;
   }
 
-  /* Room header: single row, no wrapping */
+  /* Room header: single row, NEVER wrap */
   .room-chat-header {
-    padding: 8px 12px;
-    gap: 8px;
-    flex-wrap: nowrap;
+    padding: 6px 10px;
+    gap: 6px;
+    flex-wrap: nowrap !important;
     align-items: center;
-    min-height: 52px;
-    max-height: 60px;
+    min-height: 48px;
+    max-height: 52px;
+    overflow: hidden;
   }
 
   .room-chat-actions {
-    width: auto;
-    flex-wrap: nowrap;
+    width: auto !important;
+    flex-wrap: nowrap !important;
     order: 0;
-    border-top: none;
+    border-top: none !important;
     padding-top: 0;
-    gap: 6px;
+    gap: 4px;
     flex-shrink: 0;
     margin-left: auto;
+    justify-content: flex-end !important;
   }
 
   .room-chat-info {
@@ -300,21 +302,17 @@
     overflow: hidden;
   }
 
+  /* Combine kind badge + name on one line */
+  .room-chat-info-top {
+    display: none;
+  }
+
   .room-chat-info h3 {
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .room-chat-info-top {
-    gap: 6px;
-    margin-bottom: 1px;
-  }
-
-  .room-chat-kind {
-    font-size: 11px;
-    padding: 2px 6px;
   }
 
   .room-member-count {
@@ -322,26 +320,45 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--text-secondary);
+    cursor: pointer;
   }
 
   .room-chat-header .btn-icon {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
     flex-shrink: 0;
   }
 
   .room-chat-header .btn-sm {
-    padding: 6px 10px;
-    font-size: 12px;
-    min-height: 36px;
-    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: 32px;
+    border-radius: 6px;
+    white-space: nowrap;
   }
 
-  /* Connection badge inline */
+  /* Connection badge: compact dot only */
   .room-chat-actions .agent-room-connection {
-    font-size: 11px;
-    padding: 3px 8px;
+    font-size: 0;
+    padding: 0;
+    width: 10px;
+    height: 10px;
+    min-height: 10px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .room-chat-actions .agent-room-connection.connection-connected {
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+  }
+  .room-chat-actions .agent-room-connection.connection-idle {
+    background: var(--text-muted);
+  }
+  .room-chat-actions .agent-room-connection.connection-error {
+    background: var(--danger);
   }
 
   /* ── Phase 2: Bot Pills — Collapsed by default ── */
@@ -687,11 +704,7 @@
     font-size: 12px;
   }
 
-  /* ── Room Chat Header — handled by Phase 1 above ── */
-  /* (room-chat-header, room-chat-actions, room-chat-info
-     are now defined in the Phase 1 block near the top) */
-
-  /* ── Room Chat Body & Sidebar ───────────────── */
+  /* ═══ ROOM CHAT BODY & SIDEBAR ═══════════════ */
   .room-chat-body.has-sidebar {
     flex-direction: column;
   }
@@ -701,17 +714,9 @@
     flex: 1;
   }
 
+  /* Hide thread header on mobile — wastes 60px for no value */
   .room-thread-header {
-    padding: 8px 12px;
-    gap: 8px;
-  }
-
-  .room-thread-copy h4 {
-    font-size: 14px;
-  }
-
-  .room-thread-copy p {
-    font-size: 11px;
+    display: none;
   }
 
   .room-messages {
@@ -763,22 +768,24 @@
   }
 
   .room-composer {
-    padding: 8px 12px 10px;
-    padding-bottom: calc(12px + var(--safe-bottom));
+    padding: 6px 10px 8px;
+    padding-bottom: calc(8px + var(--safe-bottom));
   }
 
   .room-composer-main {
-    gap: 8px;
+    gap: 6px;
   }
 
   .room-composer-main input {
     font-size: 16px; /* prevents iOS zoom */
-    padding: 10px 12px;
-    min-height: 44px;
+    padding: 8px 12px;
+    min-height: 40px;
+    border-radius: 20px;
   }
 
+  /* Hide composer hint on mobile — saves 20px */
   .room-composer-hint {
-    font-size: 11px;
+    display: none;
   }
 
   /* ── Phase 4: Agent Sidebar — Bottom Sheet Pattern ── */
@@ -874,12 +881,13 @@
 
   /* ── Room Chat Note (floating) ──────────────── */
   .room-chat-note {
-    top: 80px;
+    top: 56px;
     right: 8px;
     width: min(320px, calc(100% - 16px));
     padding: 10px 12px;
     border-radius: 14px;
     font-size: 12px;
+    z-index: 15;
   }
 
   /* ── Bot Pills in Room Header (hidden by default, toggle via member count) ── */
@@ -1613,11 +1621,12 @@
     padding: 5px 8px;
   }
 
-  /* Room chat header — compact but accessible */
+  /* Room chat header — extra compact on small phones */
   .room-chat-header {
-    padding: 6px 8px;
-    gap: 6px;
-    min-height: 48px;
+    padding: 4px 6px;
+    gap: 4px;
+    min-height: 44px;
+    max-height: 48px;
   }
 
   .room-chat-info h3 {
@@ -1625,20 +1634,19 @@
   }
 
   .room-chat-actions {
-    gap: 4px;
+    gap: 3px;
   }
 
-  /* Phase 3: All buttons meet 36px minimum on small phones */
   .room-chat-header .btn-sm {
-    padding: 6px 8px;
-    font-size: 11px;
-    min-height: 36px;
-    border-radius: 8px;
+    padding: 4px 6px;
+    font-size: 10px;
+    min-height: 30px;
+    border-radius: 6px;
   }
 
   .room-overflow-trigger {
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 32px;
+    min-height: 32px;
     font-size: 16px;
   }
 

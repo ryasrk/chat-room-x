@@ -869,6 +869,7 @@
     max-height: 0;
     max-width: 100%;
     border-top: none;
+    overflow: hidden;
   }
   .room-sidebar-toggle {
     width: 100%;
@@ -878,15 +879,8 @@
     border-left: none;
     border-top: 1px solid var(--border);
   }
-  .room-chat-header {
-    align-items: center;
-  }
-  .room-chat-actions {
-    /* Let mobile.css handle width via overflow menu */
-    justify-content: flex-end;
-  }
   .room-chat-note {
-    top: 68px;
+    top: 56px;
     right: 12px;
     width: min(340px, calc(100% - 24px));
   }
