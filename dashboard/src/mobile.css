@@ -1123,10 +1123,10 @@
     padding: 4px;
   }
 
-  /* Accordion: contained within sidebar scroll */
+  /* Accordion: clip for border-radius but don't create scroll trap */
   .sidebar-accordion {
     border-radius: 10px;
-    overflow: hidden;
+    overflow: clip;
   }
 
   .sidebar-accordion-header {
