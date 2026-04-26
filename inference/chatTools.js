@@ -97,20 +97,35 @@ function isBlockedHost(hostname) {
 // ── Search Providers (same as internetTools.js) ────────────────
 
 async function searchDuckDuckGo(query, count) {
-  const params = new URLSearchParams({ q: query, format: 'json', no_html: '1', skip_disambig: '1' });
-  const res = await fetch(`https://api.duckduckgo.com/?${params}`, {
+  // Use DDG HTML lite endpoint — the JSON Instant Answer API only returns Wikipedia abstracts
+  const params = new URLSearchParams({ q: query });
+  const res = await fetch(`https://html.duckduckgo.com/html/?${params}`, {
+    method: 'POST',
     signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
-    headers: { 'User-Agent': 'Tenrary-X/1.0' },
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html',
+    },
+    body: params,
   });
   if (!res.ok) throw new Error(`DuckDuckGo error: ${res.status}`);
-  const data = await res.json();
+  const html = await res.text();
+
+  // Parse results from HTML response
   const results = [];
-  if (data.Abstract) results.push({ title: data.Heading || 'Answer', url: data.AbstractURL || '', snippet: data.Abstract });
-  for (const t of (data.RelatedTopics || []).slice(0, count)) {
-    if (t.Text && t.FirstURL) results.push({ title: t.Text.slice(0, 100), url: t.FirstURL, snippet: t.Text });
-  }
-  for (const r of (data.Results || []).slice(0, count)) {
-    if (r.Text && r.FirstURL) results.push({ title: r.Text.slice(0, 100), url: r.FirstURL, snippet: r.Text });
+  const resultRegex = /<a[^>]+class="result__a"[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+  let match;
+  while ((match = resultRegex.exec(html)) && results.length < count) {
+    const rawUrl = match[1];
+    const title = match[2].replace(/<[^>]+>/g, '').trim();
+    const snippet = match[3].replace(/<[^>]+>/g, '').trim();
+    // Extract actual URL from DDG redirect
+    let url = rawUrl;
+    try {
+      const uddg = new URL(rawUrl, 'https://duckduckgo.com').searchParams.get('uddg');
+      if (uddg) url = decodeURIComponent(uddg);
+    } catch { /* use raw URL */ }
+    if (title && url) results.push({ title, url, snippet });
   }
   return results.slice(0, count);
 }
@@ -358,6 +373,83 @@ export function hasToolCalls(responseData) {
   const choice = responseData?.choices?.[0];
   return choice?.finish_reason === 'tool_calls' ||
     (Array.isArray(choice?.message?.tool_calls) && choice.message.tool_calls.length > 0);
+}
+
+/**
+ * Build a final payload with NO tools — converts tool call/result messages
+ * into plain text so the provider doesn't try to call tools again.
+ * Use this when the provider ignores tool_choice:"none".
+ */
+export function buildFinalPayload(currentPayload) {
+  const payload = { ...currentPayload };
+
+  // Remove all tool-related fields
+  delete payload.tools;
+  delete payload.tool_choice;
+  payload.stream = false;
+
+  // Convert messages: replace assistant tool_calls + tool results with a text summary
+  const newMessages = [];
+  let i = 0;
+  const msgs = payload.messages || [];
+
+  while (i < msgs.length) {
+    const msg = msgs[i];
+
+    // If this is an assistant message with tool_calls, merge it + following tool results into text
+    if (msg.role === 'assistant' && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      const toolNames = msg.tool_calls.map((tc) => tc.function?.name).join(', ');
+      let summaryParts = [`[Used tools: ${toolNames}]`];
+
+      // Collect all following tool result messages
+      i++;
+      while (i < msgs.length && msgs[i].role === 'tool') {
+        const toolResult = msgs[i];
+        try {
+          const parsed = JSON.parse(toolResult.content);
+          if (parsed.results) {
+            // Search results — format nicely
+            summaryParts.push(`Search results for "${parsed.query || ''}":`);
+            for (const r of parsed.results) {
+              summaryParts.push(`- ${r.title} (${r.url})\n  ${r.snippet || ''}`);
+            }
+          } else if (parsed.content) {
+            // Web fetch — include content
+            summaryParts.push(`Fetched ${parsed.url || ''}:\n${parsed.content.slice(0, 5000)}`);
+          } else if (parsed.result !== undefined) {
+            // Calculator
+            summaryParts.push(`Calculation: ${parsed.operation} = ${parsed.result}`);
+          } else if (parsed.error) {
+            summaryParts.push(`Tool error: ${parsed.error}`);
+          } else {
+            summaryParts.push(toolResult.content.slice(0, 3000));
+          }
+        } catch {
+          summaryParts.push(toolResult.content.slice(0, 3000));
+        }
+        i++;
+      }
+
+      // Add as a single assistant message with the tool results as text
+      newMessages.push({
+        role: 'assistant',
+        content: summaryParts.join('\n\n'),
+      });
+      continue;
+    }
+
+    newMessages.push(msg);
+    i++;
+  }
+
+  // Add instruction to respond based on the tool results
+  newMessages.push({
+    role: 'user',
+    content: 'Based on the search results and information above, please provide a comprehensive answer to my original question. Include specific details, dates, and sources from the results.',
+  });
+
+  payload.messages = newMessages;
+  return payload;
 }
 
 export { CHAT_TOOL_DEFINITIONS };

@@ -65,32 +65,33 @@ function validateUrl(urlStr, requireHttps = true) {
  * DuckDuckGo Instant Answer API (free, no key required).
  */
 async function searchDuckDuckGo(query, count) {
-  const params = new URLSearchParams({
-    q: query, format: 'json', no_html: '1', skip_disambig: '1',
-  });
-  const res = await fetch(`https://api.duckduckgo.com/?${params}`, {
+  // Use DDG HTML lite endpoint — the JSON Instant Answer API only returns Wikipedia abstracts
+  const params = new URLSearchParams({ q: query });
+  const res = await fetch(`https://html.duckduckgo.com/html/?${params}`, {
+    method: 'POST',
     signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
-    headers: { 'User-Agent': 'Tenrary-X/1.0' },
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html',
+    },
+    body: params,
   });
-  if (!res.ok) throw new Error(`DuckDuckGo API error: ${res.status}`);
-  const data = await res.json();
+  if (!res.ok) throw new Error(`DuckDuckGo error: ${res.status}`);
+  const html = await res.text();
 
   const results = [];
-  // Abstract (main answer)
-  if (data.Abstract) {
-    results.push({ title: data.Heading || 'Answer', url: data.AbstractURL || '', snippet: data.Abstract });
-  }
-  // Related topics
-  for (const topic of (data.RelatedTopics || []).slice(0, count)) {
-    if (topic.Text && topic.FirstURL) {
-      results.push({ title: topic.Text.slice(0, 100), url: topic.FirstURL, snippet: topic.Text });
-    }
-  }
-  // Results array
-  for (const r of (data.Results || []).slice(0, count)) {
-    if (r.Text && r.FirstURL) {
-      results.push({ title: r.Text.slice(0, 100), url: r.FirstURL, snippet: r.Text });
-    }
+  const resultRegex = /<a[^>]+class="result__a"[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+  let match;
+  while ((match = resultRegex.exec(html)) && results.length < count) {
+    const rawUrl = match[1];
+    const title = match[2].replace(/<[^>]+>/g, '').trim();
+    const snippet = match[3].replace(/<[^>]+>/g, '').trim();
+    let url = rawUrl;
+    try {
+      const uddg = new URL(rawUrl, 'https://duckduckgo.com').searchParams.get('uddg');
+      if (uddg) url = decodeURIComponent(uddg);
+    } catch { /* use raw URL */ }
+    if (title && url) results.push({ title, url, snippet });
   }
   return results.slice(0, count);
 }

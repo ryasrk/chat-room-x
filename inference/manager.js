@@ -20,7 +20,7 @@ import { sendCompressedJson } from './compression.js';
 import { getCacheStats, closeDatabase } from './db/database.js';
 import { handleAgentRoomUpgrade } from './agentRoom/wsBridge.js';
 import { buildChatCompletionPayload, parseSseLine, splitSseLines } from './streamProxy.js';
-import { shouldUseTools, injectTools, buildFollowUpPayload, executeToolCalls, hasToolCalls } from './chatTools.js';
+import { shouldUseTools, injectTools, buildFollowUpPayload, buildFinalPayload, executeToolCalls, hasToolCalls } from './chatTools.js';
 import { routeApiRequest } from './routes/apiRouter.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -539,17 +539,12 @@ async function handleToolAugmentedChat(parsed, res) {
 
     // Build follow-up payload with tool results
     currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
-
-    // On the last round, force the LM to respond with content (no more tool calls)
-    if (round === MAX_TOOL_ROUNDS - 1) {
-      currentPayload.tool_choice = 'none';
-    }
   }
 
-  // If we exhausted all rounds and still have tool_calls, do a final non-streaming call
-  // with tool_choice=none to force a content response
-  currentPayload.tool_choice = 'none';
-  const finalResponse = await callInferenceNonStreaming(currentPayload);
+  // Final call: strip tools entirely and convert tool messages to text summary.
+  // Many providers ignore tool_choice:"none", so we remove tools completely.
+  const finalPayload = buildFinalPayload(currentPayload);
+  const finalResponse = await callInferenceNonStreaming(finalPayload);
   const finalContent = finalResponse.data?.choices?.[0]?.message?.content || '';
   const finalReasoning = finalResponse.data?.choices?.[0]?.message?.reasoning_content;
 
@@ -900,12 +895,11 @@ websocketServer.on('connection', (ws) => {
             log(`[chat-tools-ws] Round ${round + 1}: ${assistantMsg.tool_calls.map(tc => tc.function?.name).join(', ')}`);
             const { assistantMessage, toolResultMessages } = await executeToolCalls(assistantMsg);
             currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
-            if (round === MAX_TOOL_ROUNDS - 1) currentPayload.tool_choice = 'none';
           }
 
-          // After max rounds, force a content response
-          currentPayload.tool_choice = 'none';
-          const finalResp = await callInferenceNonStreaming(currentPayload);
+          // Final call: strip tools, convert tool messages to text
+          const finalPayload = buildFinalPayload(currentPayload);
+          const finalResp = await callInferenceNonStreaming(finalPayload);
           const content = finalResp.data?.choices?.[0]?.message?.content || '';
           const reasoning = finalResp.data?.choices?.[0]?.message?.reasoning_content;
           if (reasoning) wsSend(ws, { type: 'delta', delta: reasoning, channel: 'reasoning' });
@@ -1264,12 +1258,11 @@ const controlServer = createServer(async (req, res) => {
               log(`[chat-tools-sse] Round ${round + 1}: ${assistantMsg.tool_calls.map(tc => tc.function?.name).join(', ')}`);
               const { assistantMessage, toolResultMessages } = await executeToolCalls(assistantMsg);
               currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
-              if (round === MAX_TOOL_ROUNDS - 1) currentPayload.tool_choice = 'none';
             }
 
-            // After max rounds, force a content response
-            currentPayload.tool_choice = 'none';
-            const finalResp = await callInferenceNonStreaming(currentPayload);
+            // Final call: strip tools, convert tool messages to text
+            const finalPayload = buildFinalPayload(currentPayload);
+            const finalResp = await callInferenceNonStreaming(finalPayload);
             const finalContent = finalResp.data?.choices?.[0]?.message?.content || '';
             const finalReasoning = finalResp.data?.choices?.[0]?.message?.reasoning_content;
             if (finalReasoning) res.write(`data: ${JSON.stringify({ type: 'delta', delta: finalReasoning, channel: 'reasoning' })}\n\n`);
