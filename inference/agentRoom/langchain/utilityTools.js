@@ -309,10 +309,15 @@ export function createUtilityTools(workspacePath, context = {}) {
     },
     func: async ({ path: filePath }) => {
       try {
-        const safe = safePath(workspacePath, filePath);
-        if (!safe) return JSON.stringify({ error: 'Path outside workspace' });
+        // safePath returns absolute path or throws for traversal
+        let fullPath;
+        try {
+          fullPath = safePath(workspacePath, filePath);
+        } catch {
+          return JSON.stringify({ error: 'Path outside workspace' });
+        }
+        if (!fullPath) return JSON.stringify({ error: 'Path outside workspace' });
 
-        const fullPath = join(workspacePath, safe);
         const stat = await fs.stat(fullPath);
 
         if (!stat.isFile()) return JSON.stringify({ error: 'Not a file' });
@@ -329,8 +334,12 @@ export function createUtilityTools(workspacePath, context = {}) {
         const format = detectedFormat || EXT_TO_FORMAT[ext] || 'unknown';
         const dimensions = detectedFormat ? getImageDimensions(headerBuf, detectedFormat) : null;
 
+        const relativePath = fullPath.startsWith(workspacePath)
+          ? fullPath.slice(workspacePath.length).replace(/^\//, '')
+          : filePath;
+
         return JSON.stringify({
-          path: safe,
+          path: relativePath,
           format,
           width: dimensions?.width || null,
           height: dimensions?.height || null,
