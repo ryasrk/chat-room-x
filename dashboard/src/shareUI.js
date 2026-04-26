@@ -16,7 +16,7 @@ export function createShareModal() {
   modal.innerHTML = `
     <div class="modal modal-sm">
       <div class="modal-header-row">
-        <h3>🔗 Share Chat</h3>
+        <h3>Share Chat</h3>
         <button class="modal-close-btn" id="share-modal-close">×</button>
       </div>
       <div class="share-options">
@@ -43,7 +43,7 @@ export function createShareModal() {
         <label>Share Link</label>
         <div class="share-link-row">
           <input type="text" id="share-link-input" readonly />
-          <button id="share-copy-btn" class="btn-sm btn-secondary">📋 Copy</button>
+          <button id="share-copy-btn" class="btn-sm btn-secondary">Copy</button>
         </div>
       </div>
       <div id="share-existing" class="share-existing">
@@ -163,14 +163,14 @@ export async function renderSharedChatView(shareToken) {
     viewer.className = 'shared-chat-viewer';
     viewer.innerHTML = `
       <div class="shared-chat-header">
-        <h2>📄 ${escapeHtml(data.title || 'Shared Chat')}</h2>
+        <h2>${escapeHtml(data.title || 'Shared Chat')}</h2>
         <p class="shared-chat-meta">Shared by <strong>${escapeHtml(data.shared_by)}</strong> · ${data.access_level} access</p>
         <a href="/" class="btn-secondary btn-sm">← Back to Tenrary-X</a>
       </div>
       <div class="shared-chat-messages">
         ${(data.messages || []).map((m) => `
           <div class="shared-msg shared-msg-${m.role || 'user'}">
-            <div class="shared-msg-role">${m.role === 'assistant' ? '🤖 Assistant' : '👤 User'}</div>
+            <div class="shared-msg-role">${m.role === 'assistant' ? 'Assistant' : 'User'}</div>
             <div class="shared-msg-content">${escapeHtml(m.content || '')}</div>
           </div>
         `).join('')}
@@ -183,7 +183,7 @@ export async function renderSharedChatView(shareToken) {
     document.getElementById('app').innerHTML = `
       <div class="shared-chat-viewer">
         <div class="shared-chat-header">
-          <h2>❌ Shared Chat Not Found</h2>
+          <h2>Shared Chat Not Found</h2>
           <p>${escapeHtml(err.message)}</p>
           <a href="/" class="btn-secondary btn-sm">← Back to Tenrary-X</a>
         </div>

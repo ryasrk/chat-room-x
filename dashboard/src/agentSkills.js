@@ -121,7 +121,7 @@ export async function loadSkills(container) {
       item.className = 'skill-item';
       item.innerHTML = `
         <div class="skill-item-top">
-          <span class="skill-item-name">🧠 ${escapeHtml(skill.name || skill.skill_id)}</span>
+          <span class="skill-item-name">${escapeHtml(skill.name || skill.skill_id)}</span>
           <button class="skill-remove-btn" title="Remove skill" data-id="${escapeHtml(skill.skill_id)}">×</button>
         </div>
         <div class="skill-item-desc">${escapeHtml(skill.description || '')}</div>

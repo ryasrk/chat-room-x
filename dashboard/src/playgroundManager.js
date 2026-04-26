@@ -46,7 +46,7 @@ async function runPlayground() {
   if (!prompt) return;
 
   playgroundRun.disabled = true;
-  playgroundRun.innerHTML = '<span class="pg-run-icon">⏳</span> Running...';
+  playgroundRun.innerHTML = '<span class="pg-run-icon"></span> Running...';
   playgroundOutput.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>';
 
   try {

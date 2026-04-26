@@ -327,7 +327,7 @@ export function renderFolderHeader(name, chatCount) {
   const deleteBtn = isGeneral ? '' : '<button class="folder-delete" title="Delete project">×</button>';
   return `<div class="folder-header${isGeneral ? ' folder-header--general' : ''}" data-folder="${escaped}">
   <span class="folder-toggle">▾</span>
-  <span class="folder-icon">${isGeneral ? '💬' : '📁'}</span>
+  <span class="folder-icon"></span>
   <span class="folder-name">${escaped}</span>
   <span class="folder-count">${chatCount}</span>
   ${deleteBtn}
@@ -340,7 +340,7 @@ export function renderConversationList(conversations, activeId) {
   const hasCustomFolders = allFolders.some((f) => f !== 'General');
 
   if (sorted.length === 0 && !hasCustomFolders) {
-    return '<div class="sidebar-empty"><span class="sidebar-empty-icon">💬</span><p>No conversations yet</p><p class="sidebar-empty-hint">Start a new chat or create a project</p></div>';
+    return '<div class="sidebar-empty"><p>No conversations yet</p><p class="sidebar-empty-hint">Start a new chat or create a project</p></div>';
   }
 
   // Group conversations by folder
@@ -368,7 +368,7 @@ export function renderConversationList(conversations, activeId) {
   // If only "General" exists and no custom folders, render flat list
   if (folderNames.length <= 1 && !hasCustomFolders) {
     if (sorted.length === 0) {
-      return '<div class="sidebar-empty"><span class="sidebar-empty-icon">💬</span><p>No conversations yet</p><p class="sidebar-empty-hint">Start a new chat or create a project</p></div>';
+      return '<div class="sidebar-empty"><p>No conversations yet</p><p class="sidebar-empty-hint">Start a new chat or create a project</p></div>';
     }
     return sorted
       .map((conv) => renderConversationItem(conv, conv.id === activeId))

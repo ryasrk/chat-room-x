@@ -87,8 +87,8 @@ export function createRoomsView() {
         <div class="room-chat-actions">
           <span id="room-connection-state" class="agent-room-connection connection-idle" hidden role="status" aria-live="polite" aria-label="Connection status">Idle</span>
           <button id="room-ai-btn" class="btn-sm btn-secondary room-action-primary" title="Open AI agents" hidden aria-label="Open AI agents">AI</button>
-          <button id="room-artifacts-btn" class="btn-sm btn-secondary room-action-primary room-artifacts-btn" title="View generated files & artifacts" hidden aria-label="View artifacts">📎 Artifacts <span id="room-artifacts-count" class="artifacts-badge" hidden aria-label="Artifact count">0</span></button>
-          <button id="room-download-btn" class="btn-sm btn-secondary room-action-secondary" title="Download workspace ZIP" hidden aria-label="Download workspace as ZIP">📥 ZIP</button>
+          <button id="room-artifacts-btn" class="btn-sm btn-secondary room-action-primary room-artifacts-btn" title="View generated files & artifacts" hidden aria-label="View artifacts">Artifacts <span id="room-artifacts-count" class="artifacts-badge" hidden aria-label="Artifact count">0</span></button>
+          <button id="room-download-btn" class="btn-sm btn-secondary room-action-secondary" title="Download workspace ZIP" hidden aria-label="Download workspace as ZIP">Download</button>
           <button id="room-invite-btn" class="btn-sm btn-secondary room-action-secondary" title="Copy invite code">Invite</button>
           <button id="room-leave-btn" class="btn-sm btn-secondary room-action-secondary" title="Leave room">Leave</button>
           <button id="room-delete-btn" class="btn-sm btn-danger room-action-secondary" title="Delete room (owner only)" hidden>Delete</button>
@@ -133,7 +133,7 @@ export function createRoomsView() {
           <div class="sidebar-scroll-body">
             <section class="sidebar-section" role="region" aria-label="Agent progress">
               <button class="sidebar-section-toggle" aria-expanded="true" data-section="progress">
-                <span class="sidebar-section-icon">⚡</span>
+                <span class="sidebar-section-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1L3 9h5l-1 6 6-8H8l1-6z"/></svg></span>
                 <span class="sidebar-section-title">Live Progress</span>
                 <span class="sidebar-section-chevron" aria-hidden="true">▾</span>
               </button>
@@ -143,7 +143,7 @@ export function createRoomsView() {
             </section>
             <section class="sidebar-section" role="region" aria-label="Handoff timeline">
               <button class="sidebar-section-toggle" aria-expanded="true" data-section="handoffs">
-                <span class="sidebar-section-icon">🔀</span>
+                <span class="sidebar-section-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l-4-4M14 4H8a4 4 0 0 0-4 4v4M2 12l4 4M2 12h6a4 4 0 0 0 4-4V4"/></svg></span>
                 <span class="sidebar-section-title">Handoff Flow</span>
                 <span class="sidebar-section-chevron" aria-hidden="true">▾</span>
               </button>
@@ -153,7 +153,7 @@ export function createRoomsView() {
             </section>
             <section class="sidebar-section" role="region" aria-label="Activity log">
               <button class="sidebar-section-toggle" aria-expanded="true" data-section="logs">
-                <span class="sidebar-section-icon">📋</span>
+                <span class="sidebar-section-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="1" width="12" height="14" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h4"/></svg></span>
                 <span class="sidebar-section-title">Activity Log</span>
                 <span class="sidebar-section-chevron" aria-hidden="true">▾</span>
               </button>
@@ -271,8 +271,8 @@ export function createRoomsView() {
       </div>
       <!-- Mobile tab switcher (between header and body, hidden on desktop) -->
       <div class="workspace-tab-bar" role="tablist" aria-label="Workspace view">
-        <button class="workspace-tab active" data-workspace-tab="files" role="tab" aria-selected="true">📁 Files</button>
-        <button class="workspace-tab" data-workspace-tab="preview" role="tab" aria-selected="false">👁 Preview</button>
+        <button class="workspace-tab active" data-workspace-tab="files" role="tab" aria-selected="true">Files</button>
+        <button class="workspace-tab" data-workspace-tab="preview" role="tab" aria-selected="false">Preview</button>
       </div>
       <div class="workspace-body">
         <div class="workspace-sidebar" data-workspace-panel="files">
@@ -328,7 +328,7 @@ export function createRoomsView() {
             <div class="workspace-preview-actions">
               <button type="button" id="agent-room-view-code-btn" class="btn-sm btn-secondary" hidden>Code</button>
               <button type="button" id="agent-room-view-live-btn" class="btn-sm btn-secondary" hidden>Live Preview</button>
-              <button type="button" id="agent-room-fullscreen-btn" class="btn-sm btn-secondary" hidden title="Toggle fullscreen preview">⛶ Fullscreen</button>
+              <button type="button" id="agent-room-fullscreen-btn" class="btn-sm btn-secondary" hidden title="Toggle fullscreen preview">Fullscreen</button>
               <button type="button" id="agent-room-run-python-btn" class="btn-sm btn-secondary" hidden>Run Python</button>
               <button type="button" id="agent-room-request-review-btn" class="btn-sm btn-secondary" hidden>Request Review</button>
               <button type="button" id="agent-room-request-changes-btn" class="btn-sm btn-secondary" hidden>Request Changes</button>
@@ -707,10 +707,10 @@ export function initRoomsUI() {
       const dlBtn = rs.panel.querySelector('#room-download-btn');
       const delBtn = rs.panel.querySelector('#room-delete-btn');
       showOverflowMenu(overflowBtn, [
-        { label: 'Download ZIP', icon: '📥', hidden: dlBtn?.hidden, action: () => handleDownloadWorkspace() },
-        { label: 'Copy Invite Code', icon: '🔗', action: () => inviteBtn.click() },
-        { label: 'Leave Room', icon: '👋', action: () => leaveBtn.click() },
-        { divider: true, label: 'Delete Room', icon: '🗑️', danger: true, hidden: delBtn?.hidden, action: () => delBtn?.click() },
+        { label: 'Download ZIP', icon: '', hidden: dlBtn?.hidden, action: () => handleDownloadWorkspace() },
+        { label: 'Copy Invite Code', icon: '', action: () => inviteBtn.click() },
+        { label: 'Leave Room', icon: '', action: () => leaveBtn.click() },
+        { divider: true, label: 'Delete Room', icon: '', danger: true, hidden: delBtn?.hidden, action: () => delBtn?.click() },
       ]);
     });
   }
@@ -1192,7 +1192,7 @@ export async function openAgentRoomChat(projectRoomId) {
     const activeWork = data.activeWork || [];
     if (activeWork.length > 0) {
       const workingAgents = activeWork.map((w) => `@${w.agentName}`).join(', ');
-      showToast(`🔄 ${workingAgents} still working in background`, 'info', 5000);
+      showToast(`${workingAgents} still working in background`, 'info', 5000);
       // Show the stop button since work is in progress
       const stopBtn = rs.panel?.querySelector('#room-stop-btn');
       if (stopBtn) stopBtn.hidden = false;

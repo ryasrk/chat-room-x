@@ -151,7 +151,7 @@ export function appendSkillEvent(payload) {
     const query = meta.query || '';
     const count = meta.result_count ?? 0;
     const topSkills = (meta.top_skills || []).slice(0, 3);
-    label = '🔍 Skill Search';
+    label = 'Skill Search';
     detail = `"${query}" → ${count} result${count !== 1 ? 's' : ''}`;
     if (topSkills.length > 0) {
       detail += ` (${topSkills.join(', ')})`;
@@ -160,7 +160,7 @@ export function appendSkillEvent(payload) {
     const skillId = meta.skill_id || '';
     const filePath = meta.file_path || 'SKILL.md';
     const skillName = meta.skill_name || skillId;
-    label = '📖 Skill Read';
+    label = 'Skill Read';
     detail = filePath === 'SKILL.md'
       ? skillName
       : `${skillName} / ${filePath}`;
@@ -168,7 +168,7 @@ export function appendSkillEvent(payload) {
     const skillId = meta.skill_id || '';
     const skillPath = meta.skill_path || '.';
     const count = meta.result_count ?? 0;
-    label = '📂 Skill Browse';
+    label = 'Skill Browse';
     detail = `${skillId}${skillPath !== '.' ? '/' + skillPath : ''} (${count} entries)`;
   } else {
     return;

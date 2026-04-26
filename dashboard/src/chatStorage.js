@@ -311,7 +311,7 @@ export function exportAsMarkdown(conversation) {
   lines.push('---', '');
 
   for (const msg of conversation.messages) {
-    const role = msg.role === 'user' ? '🧑 **User**' : '🤖 **Assistant**';
+    const role = msg.role === 'user' ? '**User**' : '**Assistant**';
     const time = msg.timestamp
       ? ` *(${new Date(msg.timestamp).toLocaleTimeString()})*`
       : '';

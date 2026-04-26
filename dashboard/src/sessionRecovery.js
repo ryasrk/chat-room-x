@@ -107,7 +107,7 @@ export function showRecoveryBanner(sessionData, onRestore, onDismiss) {
 
   banner.innerHTML = `
     <div class="recovery-banner-content">
-      <span class="recovery-banner-icon">🔄</span>
+      <span class="recovery-banner-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v4h4M15 12V8h-4"/><path d="M2.5 10A6 6 0 0 0 8 14a6 6 0 0 0 5.2-3M13.5 6A6 6 0 0 0 8 2a6 6 0 0 0-5.2 3"/></svg></span>
       <span class="recovery-banner-text">
         ${wasStreaming ? 'A response was interrupted.' : `Previous session found (${msgCount} messages).`}
         ${sessionData.conversationId ? ' Restore it?' : ''}

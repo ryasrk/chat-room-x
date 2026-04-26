@@ -49,7 +49,7 @@ export function renderSnapshotSection(container) {
     <div class="sidebar-accordion-body">
       <div class="snapshot-create-row">
         <input type="text" class="snapshot-label-input" placeholder="Snapshot label…" maxlength="120" />
-        <button type="button" class="snapshot-create-btn" title="Create snapshot">📷</button>
+        <button type="button" class="snapshot-create-btn" title="Create snapshot">Save</button>
       </div>
       <div class="snapshot-list">
         ${_loading ? '<div class="snapshot-loading">Loading…</div>' : ''}
@@ -151,7 +151,7 @@ async function handleViewSnapshot(snapshotId, container) {
       ${snapshot.description ? `<div class="snapshot-detail-desc">${escapeHtml(snapshot.description)}</div>` : ''}
       <div class="snapshot-detail-meta">${files.length} files · ${formatSize(snapshot.total_size)} · by ${escapeHtml(snapshot.created_by || 'unknown')}</div>
       <div class="snapshot-detail-files">
-        ${files.map(f => `<div class="snapshot-file-row"><span>📄 ${escapeHtml(f.path)}</span><span>${formatSize(f.size)}</span></div>`).join('')}
+        ${files.map(f => `<div class="snapshot-file-row"><span>${escapeHtml(f.path)}</span><span>${formatSize(f.size)}</span></div>`).join('')}
         ${files.length === 0 ? '<div class="snapshot-empty">No files recorded</div>' : ''}
       </div>
     `;

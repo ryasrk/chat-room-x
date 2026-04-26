@@ -61,20 +61,20 @@ export function sanitizeClassToken(value, fallback = 'idle') {
 
 // ── File type utilities ──────────────────────────────────────────
 export const FILE_ICONS = {
-  js: '📜', mjs: '📜', cjs: '📜',
-  ts: '🔷', tsx: '🔷', jsx: '⚛️',
-  py: '🐍', rb: '💎', go: '🔵',
-  rs: '🦀', java: '☕', kt: '🟣',
-  html: '🌐', css: '🎨', scss: '🎨',
-  json: '📋', yaml: '📋', yml: '📋', toml: '📋',
-  md: '📝', txt: '📄', csv: '📊',
-  sh: '🖥️', bash: '🖥️', zsh: '🖥️',
-  sql: '🗃️', graphql: '🔗',
-  dockerfile: '🐳', docker: '🐳',
-  svg: '🖼️', png: '🖼️', jpg: '🖼️',
-  lock: '🔒', env: '🔐',
-  test: '🧪', spec: '🧪',
-  directory: '📁',
+  js: 'JS', mjs: 'JS', cjs: 'JS',
+  ts: 'TS', tsx: 'TS', jsx: 'JSX',
+  py: 'PY', rb: 'RB', go: 'GO',
+  rs: 'RS', java: 'JV', kt: 'KT',
+  html: 'HTML', css: 'CSS', scss: 'SCSS',
+  json: 'JSON', yaml: 'YML', yml: 'YML', toml: 'TOML',
+  md: 'MD', txt: 'TXT', csv: 'CSV',
+  sh: 'SH', bash: 'SH', zsh: 'SH',
+  sql: 'SQL', graphql: 'GQL',
+  dockerfile: 'DOCK', docker: 'DOCK',
+  svg: 'IMG', png: 'IMG', jpg: 'IMG',
+  lock: 'LOCK', env: 'ENV',
+  test: 'TEST', spec: 'TEST',
+  directory: '',
 };
 
 export function getFileIcon(path, type = 'file') {
@@ -83,7 +83,7 @@ export function getFileIcon(path, type = 'file') {
   if (name === 'dockerfile') return FILE_ICONS.dockerfile;
   if (name.includes('.test.') || name.includes('.spec.')) return FILE_ICONS.test;
   const ext = name.split('.').pop();
-  return FILE_ICONS[ext] || '📄';
+  return FILE_ICONS[ext] || '';
 }
 
 export function getFileLanguage(path) {

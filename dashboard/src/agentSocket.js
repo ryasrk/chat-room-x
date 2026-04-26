@@ -189,10 +189,9 @@ export function connectAgentRoomSocket() {
     }
 
     if (payload.type === 'agent_room:quality_gate') {
-      const emoji = payload.verdict === 'approved' ? '✅' : '🔄';
       const msg = payload.verdict === 'approved'
-        ? `${emoji} @${payload.reviewer} approved the implementation`
-        : `${emoji} @${payload.reviewer} requested rework (cycle ${payload.cycle})`;
+        ? `@${payload.reviewer} approved the implementation`
+        : `@${payload.reviewer} requested rework (cycle ${payload.cycle})`;
       appendAgentRoomMessage({
         sender_type: 'system',
         sender_name: 'quality-gate',
@@ -207,7 +206,7 @@ export function connectAgentRoomSocket() {
       appendAgentRoomMessage({
         sender_type: 'system',
         sender_name: 'quality-gate',
-        content: `⚠️ @${payload.reviewer} requested rework (cycle ${payload.cycle}). What would you like to do?`,
+        content: `@${payload.reviewer} requested rework (cycle ${payload.cycle}). What would you like to do?`,
         event_type: 'system',
         created_at: payload.timestamp || Math.floor(Date.now() / 1000),
       });
@@ -219,7 +218,7 @@ export function connectAgentRoomSocket() {
       appendAgentRoomMessage({
         sender_type: 'system',
         sender_name: 'orchestrator',
-        content: `🤖 @${payload.spawned_by} spawned new agent @${payload.agent_name} (${payload.role})`,
+        content: `@${payload.spawned_by} spawned new agent @${payload.agent_name} (${payload.role})`,
         event_type: 'system',
         created_at: payload.timestamp || Math.floor(Date.now() / 1000),
       });
@@ -277,9 +276,9 @@ function showReworkDecisionUI(payload) {
       <br><em>${(payload.review_summary || '').slice(0, 200)}</em>
     </p>
     <div class="rework-decision-actions">
-      <button class="rework-btn rework-btn-continue" data-decision="continue">🔄 Continue Rework</button>
-      <button class="rework-btn rework-btn-accept" data-decision="accept">✅ Accept As-Is</button>
-      <button class="rework-btn rework-btn-stop" data-decision="stop">⏹️ Stop</button>
+      <button class="rework-btn rework-btn-continue" data-decision="continue">Continue Rework</button>
+      <button class="rework-btn rework-btn-accept" data-decision="accept">Accept As-Is</button>
+      <button class="rework-btn rework-btn-stop" data-decision="stop">Stop</button>
     </div>
   `;
 

@@ -139,7 +139,7 @@ export function renderObservabilityCards(container) {
         <div class="obs-card obs-card-wide">
           <div class="obs-card-label">Grounded Attachments</div>
           <div class="obs-card-detail">
-            ${attachments.map(a => `<span class="obs-attachment-tag" title="${a.chunks} chunks, ~${formatTokenCount(a.tokens)} tokens">📎 ${escapeHtml(a.fileName)}</span>`).join(' ')}
+            ${attachments.map(a => `<span class="obs-attachment-tag" title="${a.chunks} chunks, ~${formatTokenCount(a.tokens)} tokens">${escapeHtml(a.fileName)}</span>`).join(' ')}
           </div>
         </div>
       ` : ''}

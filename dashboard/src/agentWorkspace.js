@@ -94,7 +94,7 @@ export function renderAgentProgress() {
         const artifacts = Array.isArray(item.artifacts) && item.artifacts.length > 0
           ? `<div class="progress-artifacts">${item.artifacts.map((artifact) => `
               <button type="button" class="progress-artifact" data-artifact-path="${escapeHtml(artifact.path)}" title="${escapeHtml(artifact.path)}">
-                <span>📄</span>${escapeHtml(artifact.path.split('/').pop() || artifact.path)}
+                <span class="artifact-icon"></span>${escapeHtml(artifact.path.split('/').pop() || artifact.path)}
               </button>
             `).join('')}</div>`
           : '';
@@ -130,13 +130,13 @@ function formatProgressTool(tool) {
 
   // Skill tool formatting
   if (toolName === 'search_skills') {
-    return `🔍 search_skills • ${toolStatus || 'done'}`;
+    return `search_skills • ${toolStatus || 'done'}`;
   }
   if (toolName === 'read_skill') {
-    return `📖 read_skill • ${toolStatus || 'done'}`;
+    return `read_skill • ${toolStatus || 'done'}`;
   }
   if (toolName === 'list_skill_files') {
-    return `📂 list_skill_files • ${toolStatus || 'done'}`;
+    return `list_skill_files • ${toolStatus || 'done'}`;
   }
 
   if (toolPath && toolStatus) {
@@ -379,7 +379,7 @@ export function togglePreviewFullscreen() {
   const isFullscreen = workspaceMain.classList.toggle('is-fullscreen');
   const fullscreenBtn = rs.panel?.querySelector('#agent-room-fullscreen-btn');
   if (fullscreenBtn) {
-    fullscreenBtn.textContent = isFullscreen ? '⛶ Exit' : '⛶ Fullscreen';
+    fullscreenBtn.textContent = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
   }
 
   if (isFullscreen) {
@@ -407,7 +407,7 @@ export function togglePreviewFullscreen() {
 
 function _exitFullscreen(workspaceMain, fullscreenBtn, keyHandler) {
   workspaceMain.classList.remove('is-fullscreen');
-  if (fullscreenBtn) fullscreenBtn.textContent = '⛶ Fullscreen';
+  if (fullscreenBtn) fullscreenBtn.textContent = 'Fullscreen';
   _cleanupFullscreen(workspaceMain, fullscreenBtn);
   if (keyHandler) document.removeEventListener('keydown', keyHandler);
   syncWorkspacePreviewActions();
@@ -783,7 +783,7 @@ function syncWorkspacePreviewActions() {
   if (fullscreenBtn) {
     fullscreenBtn.hidden = !path;
     const isFullscreen = rs.panel?.querySelector('.workspace-main')?.classList.contains('is-fullscreen');
-    fullscreenBtn.textContent = isFullscreen ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
+    fullscreenBtn.textContent = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
   }
 
   if (runBtn) {
@@ -969,23 +969,23 @@ function renderLogEntry(log) {
 
   // File path badge
   const filePath = logMeta.path || log?.path || '';
-  if (filePath) badges.push(`<span class="log-path-badge">📄 ${escapeHtml(filePath)}</span>`);
+  if (filePath) badges.push(`<span class="log-path-badge">${escapeHtml(filePath)}</span>`);
 
   // Skill-specific badges
   if (toolName === 'search_skills' && logMeta.query) {
-    badges.push(`<span class="log-skill-badge">🔍 "${escapeHtml(logMeta.query)}"</span>`);
+    badges.push(`<span class="log-skill-badge">"${escapeHtml(logMeta.query)}"</span>`);
     if (logMeta.result_count != null) {
       badges.push(`<span class="log-skill-count">${logMeta.result_count} found</span>`);
     }
   }
   if (toolName === 'read_skill' && logMeta.skill_id) {
-    badges.push(`<span class="log-skill-badge">📖 ${escapeHtml(logMeta.skill_name || logMeta.skill_id)}</span>`);
+    badges.push(`<span class="log-skill-badge">${escapeHtml(logMeta.skill_name || logMeta.skill_id)}</span>`);
     if (logMeta.file_path && logMeta.file_path !== 'SKILL.md') {
-      badges.push(`<span class="log-path-badge">📄 ${escapeHtml(logMeta.file_path)}</span>`);
+      badges.push(`<span class="log-path-badge">${escapeHtml(logMeta.file_path)}</span>`);
     }
   }
   if (toolName === 'list_skill_files' && logMeta.skill_id) {
-    badges.push(`<span class="log-skill-badge">📂 ${escapeHtml(logMeta.skill_id)}</span>`);
+    badges.push(`<span class="log-skill-badge">${escapeHtml(logMeta.skill_id)}</span>`);
     if (logMeta.result_count != null) {
       badges.push(`<span class="log-skill-count">${logMeta.result_count} entries</span>`);
     }

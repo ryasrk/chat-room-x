@@ -159,13 +159,13 @@ export function createMessageEl(role, content, stats = null, images = [], msgDat
       <div class="message-meta">
         <span class="message-role">${roleName}</span>
         <span class="message-time">${time}</span>
-        <button class="pin-msg-btn" title="Pin message">📌</button>
+        <button class="pin-msg-btn" title="Pin message"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l5 5-3.5 1L12 13 3 4l5-1.5L9 2z"/><path d="M3 13l3.5-3.5"/></svg></button>
         ${role === 'user' ? '<button class="edit-msg-btn" title="Edit">Edit</button>' : '<button class="regen-btn" title="Regenerate">Redo</button>'}
-        ${role === 'assistant' ? '<button class="reaction-btn" data-reaction="up" title="Good response">👍</button><button class="reaction-btn" data-reaction="down" title="Poor response">👎</button>' : ''}
+        ${role === 'assistant' ? '<button class="reaction-btn" data-reaction="up" title="Good response"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9V14H2V9M5 9L7 3.5C7 2.67 7.67 2 8.5 2S10 2.67 10 3.5V7H13.5C14.33 7 15 7.67 15 8.5L13.5 14H5"/></svg></button><button class="reaction-btn" data-reaction="down" title="Poor response"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 7V2H14V7M11 7L9 12.5C9 13.33 8.33 14 7.5 14S6 13.33 6 12.5V9H2.5C1.67 9 1 8.33 1 7.5L2.5 2H11"/></svg></button>' : ''}
       </div>
       <div class="message-content">${renderedContent}</div>
       <div class="message-actions">
-        <button class="copy-msg-btn" title="Copy message">📋 Copy</button>
+        <button class="copy-msg-btn" title="Copy message">Copy</button>
       </div>
       ${stats ? `<div class="message-stats">${stats}</div>` : ''}
     </div>
@@ -207,11 +207,11 @@ export function createMessageEl(role, content, stats = null, images = [], msgDat
       const text = contentEl?.innerText || contentEl?.textContent || content;
       try {
         await copyToClipboard(text);
-        copyMsgBtn.textContent = '✅';
-        setTimeout(() => { copyMsgBtn.textContent = '📋 Copy'; }, 2000);
+        copyMsgBtn.textContent = 'Copied';
+        setTimeout(() => { copyMsgBtn.textContent = 'Copy'; }, 2000);
       } catch {
-        copyMsgBtn.textContent = '❌';
-        setTimeout(() => { copyMsgBtn.textContent = '📋 Copy'; }, 2000);
+        copyMsgBtn.textContent = 'Failed';
+        setTimeout(() => { copyMsgBtn.textContent = 'Copy'; }, 2000);
       }
     });
   }

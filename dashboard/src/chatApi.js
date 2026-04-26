@@ -488,8 +488,8 @@ export async function sendToAPI() {
             const queuePos = getQueuePosition(msg.position);
             _streamSM?.transition(StreamState.QUEUED, queuePos);
             contentEl.innerHTML = queuePos
-              ? `<div class="queue-status"><span class="queue-icon">⏳</span><span class="queue-label">Queued</span><span class="queue-badge">#${queuePos}</span></div>`
-              : `<div class="queue-status"><span class="queue-icon">⏳</span><span class="queue-label">Queued</span></div>`;
+              ? `<div class="queue-status"><span class="queue-label">Queued</span><span class="queue-badge">#${queuePos}</span></div>`
+              : `<div class="queue-status"><span class="queue-label">Queued</span></div>`;
           } else if (msg.type === 'delta' && msg.delta) {
             if (_streamSM?.state !== StreamState.STREAMING) _streamSM?.transition(StreamState.STREAMING);
             if (msg.channel === 'reasoning') reasoningContent += msg.delta;
@@ -510,7 +510,7 @@ export async function sendToAPI() {
           if (settled) return;
           if (aborted) { rejectOnce(new DOMException('The operation was aborted.', 'AbortError')); return; }
           if (fullContent) {
-            if (event.code !== 1000) fullContent += '\n\n⚠️ *Response may be truncated (connection closed unexpectedly).*';
+            if (event.code !== 1000) fullContent += '\n\n*Response may be truncated (connection closed unexpectedly).*';
             renderStream(false); resolveOnce(); return;
           }
           rejectOnce(new Error(event.reason || 'WebSocket connection closed unexpectedly.'));
@@ -558,8 +558,8 @@ export async function sendToAPI() {
               const queuePos = getQueuePosition(msg.position);
               _streamSM?.transition(StreamState.QUEUED, queuePos);
               contentEl.innerHTML = queuePos
-                ? `<div class="queue-status"><span class="queue-icon">⏳</span><span class="queue-label">Queued</span><span class="queue-badge">#${queuePos}</span></div>`
-                : `<div class="queue-status"><span class="queue-icon">⏳</span><span class="queue-label">Queued</span></div>`;
+                ? `<div class="queue-status"><span class="queue-label">Queued</span><span class="queue-badge">#${queuePos}</span></div>`
+                : `<div class="queue-status"><span class="queue-label">Queued</span></div>`;
             } else if (msg.type === 'delta' && msg.delta) {
               if (_streamSM?.state !== StreamState.STREAMING) _streamSM?.transition(StreamState.STREAMING);
               if (msg.channel === 'reasoning') reasoningContent += msg.delta;
@@ -598,17 +598,17 @@ export async function sendToAPI() {
     const copyBtn = document.createElement('button');
     copyBtn.className = 'copy-msg-btn';
     copyBtn.title = 'Copy message';
-    copyBtn.textContent = '📋 Copy';
+    copyBtn.textContent = 'Copy';
     copyBtn.addEventListener('click', async () => {
       const contentEl = streamEl.querySelector('.message-content');
       const text = contentEl?.innerText || contentEl?.textContent || '';
       try {
         await navigator.clipboard.writeText(text);
-        copyBtn.textContent = '✅';
-        setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+        copyBtn.textContent = 'Copied';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
       } catch {
-        copyBtn.textContent = '❌';
-        setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+        copyBtn.textContent = 'Failed';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
       }
     });
     actionsEl.appendChild(copyBtn);
@@ -627,7 +627,7 @@ export async function sendToAPI() {
     }
     if (metaEl && !metaEl.querySelector('.pin-msg-btn')) {
       const pinBtn = document.createElement('button');
-      pinBtn.className = 'pin-msg-btn'; pinBtn.title = 'Pin message'; pinBtn.textContent = '📌';
+      pinBtn.className = 'pin-msg-btn'; pinBtn.title = 'Pin message'; pinBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l5 5-3.5 1L12 13 3 4l5-1.5L9 2z"/><path d="M3 13l3.5-3.5"/></svg>';
       pinBtn.addEventListener('click', () => {
         streamEl.classList.toggle('pinned');
         pinBtn.classList.toggle('active');
@@ -641,7 +641,7 @@ export async function sendToAPI() {
         const btn = document.createElement('button');
         btn.className = 'reaction-btn'; btn.dataset.reaction = reaction;
         btn.title = reaction === 'up' ? 'Good response' : 'Poor response';
-        btn.textContent = reaction === 'up' ? '👍' : '👎';
+        btn.innerHTML = reaction === 'up' ? '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9V14H2V9M5 9L7 3.5C7 2.67 7.67 2 8.5 2S10 2.67 10 3.5V7H13.5C14.33 7 15 7.67 15 8.5L13.5 14H5"/></svg>' : '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 7V2H14V7M11 7L9 12.5C9 13.33 8.33 14 7.5 14S6 13.33 6 12.5V9H2.5C1.67 9 1 8.33 1 7.5L2.5 2H11"/></svg>';
         btn.addEventListener('click', () => {
           const isActive = btn.classList.contains('active');
           streamEl.querySelectorAll('.reaction-btn').forEach((b) => b.classList.remove('active'));

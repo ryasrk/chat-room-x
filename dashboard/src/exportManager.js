@@ -60,7 +60,7 @@ export function exportChat(format) {
 
 function buildShareHtml(conv) {
   const msgs = conv.messages.map((m) => {
-    const role = m.role === 'user' ? '🧑 You' : '🤖 Cloud AI';
+    const role = m.role === 'user' ? 'You' : 'Cloud AI';
     const escaped = m.content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return `<div style="margin:8px 0;padding:10px;border-radius:8px;background:${m.role === 'user' ? '#1a3a5c' : '#1c1c2e'}"><strong>${role}</strong><pre style="white-space:pre-wrap;margin:6px 0 0;font-family:inherit">${escaped}</pre></div>`;
   }).join('');

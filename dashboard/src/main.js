@@ -244,7 +244,7 @@ if (restartGatewayBtn) {
     
     try {
       restartGatewayBtn.disabled = true;
-      restartGatewayBtn.textContent = '⏳ Restarting...';
+      restartGatewayBtn.textContent = 'Restarting...';
       
       const response = await fetch('/manager/restart-gateway', { 
         method: 'POST',
