@@ -17,6 +17,8 @@ import { createWorkspaceTools, createCollaborationTools } from './workspaceTools
 import { createAdvancedTools } from './advancedTools.js';
 import { createInternetTools } from './internetTools.js';
 import { createUtilityTools } from './utilityTools.js';
+import { createBrowserTools } from './browserTools.js';
+import { createSemanticSearchTools } from './semanticSearchTools.js';
 import { createMcpTools } from './mcpTools.js';
 import { createSkillTools } from './skillTools.js';
 
@@ -90,6 +92,14 @@ const KNOWN_TOOL_NAMES = new Set([
   // Utility tools
   'calculator',
   'image_info',
+  // Browser tools
+  'browser_open',
+  'browser_click',
+  'browser_type',
+  'browser_screenshot',
+  'browser_read',
+  // Semantic search
+  'semantic_search',
 ]);
 
 export function getRoleOperatingGuidance(agent) {
@@ -718,7 +728,9 @@ export async function runReactiveAgentTurn({
   });
   const internetTools = createInternetTools({ agentName: agent.name });
   const utilityTools = createUtilityTools(roomContext.workspacePath, { agentName: agent.name });
-  const allTools = [...filteredWorkspaceTools, ...advancedTools, ...collaborationTools, ...skillTools, ...mcpTools, ...internetTools, ...utilityTools];
+  const browserTools = createBrowserTools(roomContext.workspacePath, { agentName: agent.name });
+  const semanticTools = createSemanticSearchTools(roomContext.workspacePath, { agentName: agent.name });
+  const allTools = [...filteredWorkspaceTools, ...advancedTools, ...collaborationTools, ...skillTools, ...mcpTools, ...internetTools, ...utilityTools, ...browserTools, ...semanticTools];
   console.log(`[${agent.name}] Tools bound: ${allTools.map(t => t.name).join(', ')} (${allTools.length} total, ${skillTools.length} skill tools)`);
   const toolCallingMode = getToolCallingMode(agent);
   const baseModel = createAgentModel(agent);
@@ -873,7 +885,7 @@ export async function runReactiveAgentTurn({
 
   // ── Tool Result Cache ───────────────────────────────────────
   // Cache read-only tool results within this turn to avoid redundant LLM calls.
-  const CACHEABLE_TOOLS = new Set(['list_files', 'read_file', 'search_skills', 'read_skill', 'list_skill_files', 'grep_search', 'file_search', 'memory', 'web_search', 'web_fetch', 'calculator', 'image_info']);
+  const CACHEABLE_TOOLS = new Set(['list_files', 'read_file', 'search_skills', 'read_skill', 'list_skill_files', 'grep_search', 'file_search', 'memory', 'web_search', 'web_fetch', 'calculator', 'image_info', 'semantic_search', 'browser_read']);
   const toolResultCache = new Map();
 
   try {
@@ -1724,7 +1736,7 @@ function shouldContinueAfterToolRound(toolCalls, toolResults, cleanMessage, hand
     return false;
   }
 
-  const readOnlyTools = new Set(['list_files', 'read_file', 'search_skills', 'read_skill', 'list_skill_files', 'web_search', 'web_fetch', 'calculator', 'image_info']);
+  const readOnlyTools = new Set(['list_files', 'read_file', 'search_skills', 'read_skill', 'list_skill_files', 'web_search', 'web_fetch', 'calculator', 'image_info', 'semantic_search', 'browser_read', 'browser_open']);
   return toolCalls.every((toolCall) => readOnlyTools.has(toolCall.tool));
 }
 
@@ -1746,7 +1758,7 @@ function shouldRequestPostToolActions({ cleanMessage, toolCalls, toolResults, ha
     return false;
   }
 
-  const readOnlyTools = new Set(['list_files', 'read_file', 'search_skills', 'read_skill', 'list_skill_files', 'web_search', 'web_fetch', 'calculator', 'image_info']);
+  const readOnlyTools = new Set(['list_files', 'read_file', 'search_skills', 'read_skill', 'list_skill_files', 'web_search', 'web_fetch', 'calculator', 'image_info', 'semantic_search', 'browser_read', 'browser_open']);
   const usedMutatingTool = toolCalls.some((toolCall) => !readOnlyTools.has(toolCall.tool));
   if (!usedMutatingTool) {
     return false;
