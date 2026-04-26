@@ -240,7 +240,12 @@ export class ConnectionManager {
         }
         return true;
       }
-      this.setState('disconnected');
+      // 503 = server reachable but inference not ready → reconnecting, not disconnected
+      if (res.status === 503) {
+        this.setState('reconnecting');
+      } else {
+        this.setState('disconnected');
+      }
       return false;
     } catch {
       this.setState('disconnected');

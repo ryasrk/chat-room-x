@@ -106,7 +106,7 @@ connMgr.onStateChange((newState) => {
   statusIndicator.className = `status ${classes[newState] || 'offline'}`;
   statusIndicator.textContent = labels[newState] || '● Unknown';
 });
-connMgr.startHealthPolling('/manager/health', 10000);
+connMgr.startHealthPolling('/health', 10000);
 
 // ── Module Init (inject cross-module dependencies) ─────────────
 initChatApi({ connMgr, renderAttachedFiles, refreshSidebar });
@@ -246,7 +246,7 @@ if (restartGatewayBtn) {
       restartGatewayBtn.disabled = true;
       restartGatewayBtn.textContent = '⏳ Restarting...';
       
-      const response = await fetch('/restart-gateway', { 
+      const response = await fetch('/manager/restart-gateway', { 
         method: 'POST',
         signal: AbortSignal.timeout(30000)
       });
@@ -258,7 +258,7 @@ if (restartGatewayBtn) {
         // Give the gateway time to restart
         setTimeout(() => {
           connMgr.setState('reconnecting');
-          connMgr.startHealthPolling('/manager/health', 10000);
+          connMgr.startHealthPolling('/health', 10000);
         }, 1500);
       } else {
         showToast(data.error || 'Failed to restart gateway', 'error');
