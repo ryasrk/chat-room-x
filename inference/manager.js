@@ -398,7 +398,7 @@ function proxyInferenceRequest(pathname, { method = 'GET', body = null } = {}, r
 // Intercepts chat completions when tools_enabled is true.
 // Makes a non-streaming call first to check for tool_calls,
 // executes tools server-side, then streams the final response.
-const MAX_TOOL_ROUNDS = 3; // Prevent infinite tool loops
+const MAX_TOOL_ROUNDS = 2; // Prevent infinite tool loops (1 search + 1 follow-up max)
 
 /**
  * Make a non-streaming inference call and return the parsed response.
@@ -539,15 +539,31 @@ async function handleToolAugmentedChat(parsed, res) {
 
     // Build follow-up payload with tool results
     currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
-    // Next round will check if LLM wants more tools or gives final answer
+
+    // On the last round, force the LM to respond with content (no more tool calls)
+    if (round === MAX_TOOL_ROUNDS - 1) {
+      currentPayload.tool_choice = 'none';
+    }
   }
 
-  // After max rounds, do a final streaming call without tools
-  delete currentPayload.tools;
-  delete currentPayload.tool_choice;
-  currentPayload.stream = true;
-  const finalBody = JSON.stringify(currentPayload);
-  return proxyInferenceRequest('/v1/chat/completions', { method: 'POST', body: finalBody }, res);
+  // If we exhausted all rounds and still have tool_calls, do a final non-streaming call
+  // with tool_choice=none to force a content response
+  currentPayload.tool_choice = 'none';
+  const finalResponse = await callInferenceNonStreaming(currentPayload);
+  const finalContent = finalResponse.data?.choices?.[0]?.message?.content || '';
+  const finalReasoning = finalResponse.data?.choices?.[0]?.message?.reasoning_content;
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+  if (finalReasoning) {
+    res.write(`data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: finalReasoning } }] })}\n\n`);
+  }
+  res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: finalContent } }] })}\n\n`);
+  res.write('data: [DONE]\n\n');
+  return res.end();
 }
 
 function checkInferenceHealth() {
@@ -884,15 +900,17 @@ websocketServer.on('connection', (ws) => {
             log(`[chat-tools-ws] Round ${round + 1}: ${assistantMsg.tool_calls.map(tc => tc.function?.name).join(', ')}`);
             const { assistantMessage, toolResultMessages } = await executeToolCalls(assistantMsg);
             currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
+            if (round === MAX_TOOL_ROUNDS - 1) currentPayload.tool_choice = 'none';
           }
 
-          // After max rounds, stream final without tools
-          delete currentPayload.tools;
-          delete currentPayload.tool_choice;
-          currentPayload.stream = true;
-          const entry = { type: 'ws', ws, params: currentPayload, cleanupRef: null, inFlight: false };
-          activeEntry = entry;
-          if (!enqueueRequest(entry)) wsSend(ws, { type: 'error', message: 'Queue full' });
+          // After max rounds, force a content response
+          currentPayload.tool_choice = 'none';
+          const finalResp = await callInferenceNonStreaming(currentPayload);
+          const content = finalResp.data?.choices?.[0]?.message?.content || '';
+          const reasoning = finalResp.data?.choices?.[0]?.message?.reasoning_content;
+          if (reasoning) wsSend(ws, { type: 'delta', delta: reasoning, channel: 'reasoning' });
+          wsSend(ws, { type: 'delta', delta: content });
+          wsSend(ws, { type: 'done' });
         } catch (err) {
           log(`[chat-tools-ws] Error: ${err.message}`);
           wsSend(ws, { type: 'error', message: `Tool error: ${err.message}` });
@@ -1246,18 +1264,18 @@ const controlServer = createServer(async (req, res) => {
               log(`[chat-tools-sse] Round ${round + 1}: ${assistantMsg.tool_calls.map(tc => tc.function?.name).join(', ')}`);
               const { assistantMessage, toolResultMessages } = await executeToolCalls(assistantMsg);
               currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
+              if (round === MAX_TOOL_ROUNDS - 1) currentPayload.tool_choice = 'none';
             }
 
-            // After max rounds, stream final
-            delete currentPayload.tools;
-            delete currentPayload.tool_choice;
-            currentPayload.stream = true;
-            const entry = { type: 'sse', res, params: currentPayload, disconnected: false, cleanupRef: null, inFlight: false };
-            req.on('close', () => { entry.disconnected = true; });
-            if (!enqueueRequest(entry)) {
-              res.write(`data: ${JSON.stringify({ type: 'error', message: 'Queue full' })}\n\n`);
-              res.end();
-            }
+            // After max rounds, force a content response
+            currentPayload.tool_choice = 'none';
+            const finalResp = await callInferenceNonStreaming(currentPayload);
+            const finalContent = finalResp.data?.choices?.[0]?.message?.content || '';
+            const finalReasoning = finalResp.data?.choices?.[0]?.message?.reasoning_content;
+            if (finalReasoning) res.write(`data: ${JSON.stringify({ type: 'delta', delta: finalReasoning, channel: 'reasoning' })}\n\n`);
+            res.write(`data: ${JSON.stringify({ type: 'delta', delta: finalContent })}\n\n`);
+            res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+            res.end();
           } catch (err) {
             log(`[chat-tools-sse] Error: ${err.message}`);
             res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
