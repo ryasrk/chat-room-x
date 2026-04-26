@@ -193,7 +193,14 @@ async function apiPut(path, body) {
 /** Compute remaining seconds until access token expires (using stored_at). */
 function getRemainingTtl() {
   const tokens = getStoredTokens();
-  if (!tokens?.stored_at || !tokens?.expires_in) return 0;
+  if (!tokens?.expires_in) return 0;
+  // If stored_at is missing (tokens from before this update), assume still valid
+  // and backfill stored_at for future reloads
+  if (!tokens.stored_at) {
+    tokens.stored_at = Date.now();
+    localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens));
+    return tokens.expires_in;
+  }
   const elapsed = (Date.now() - tokens.stored_at) / 1000;
   return Math.max(0, tokens.expires_in - elapsed);
 }

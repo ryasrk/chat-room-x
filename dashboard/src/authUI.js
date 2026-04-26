@@ -64,6 +64,7 @@ function createAuthModal() {
   const modal = document.createElement('div');
   modal.id = 'auth-modal';
   modal.className = 'modal-overlay auth-modal-overlay';
+  modal.style.display = 'none'; // Hidden by default — shown only when needed
   modal.innerHTML = `
     <div class="modal auth-modal">
       <div class="auth-brand">
@@ -432,6 +433,7 @@ export function initAuthUI() {
   if (user) {
     scopeUserStorage(user.id);
     updateUserUI(user);
+    hideAuthModal(); // Ensure login modal is hidden
     showApp();
 
     // If token was expired, `ready` will resolve after refresh attempt
