@@ -50,6 +50,7 @@ function sendJson(req, res, statusCode, data, extraHeaders = {}) {
 
 // ── Gateway Restart Helper ─────────────────────────────────────
 const execAsync = promisify(exec);
+const BASH_EXEC_OPTS = { shell: '/bin/bash', env: { ...process.env, PATH: `${process.env.HOME}/.local/bin:${process.env.PATH}` } };
 
 async function restartEnowxaiGateway() {
   const steps = [];
@@ -58,7 +59,7 @@ async function restartEnowxaiGateway() {
     // Step 1: enowxai stop
     console.log('[restart-gateway] Step 1/3 — enowxai stop...');
     try {
-      const { stdout, stderr } = await execAsync('enowxai stop', { timeout: 10000 });
+      const { stdout, stderr } = await execAsync('enowxai stop', { ...BASH_EXEC_OPTS, timeout: 10000 });
       console.log('[restart-gateway] enowxai stop completed');
       if (stdout?.trim()) console.log('[restart-gateway] stdout:', stdout.trim());
       steps.push({ step: 'enowxai stop', status: 'ok' });
@@ -71,11 +72,11 @@ async function restartEnowxaiGateway() {
     // Step 2: Kill port 1431 PID
     console.log('[restart-gateway] Step 2/3 — killing port 1431 PID...');
     try {
-      const { stdout: pids } = await execAsync('lsof -ti:1431 2>/dev/null || true');
+      const { stdout: pids } = await execAsync('lsof -ti:1431 2>/dev/null || true', BASH_EXEC_OPTS);
       const pidList = pids.trim().split('\n').filter(Boolean);
 
       if (pidList.length > 0) {
-        await execAsync(`lsof -ti:1431 | xargs kill -9 2>/dev/null || true`);
+        await execAsync(`lsof -ti:1431 | xargs kill -9 2>/dev/null || true`, BASH_EXEC_OPTS);
         console.log(`[restart-gateway] Killed PIDs on port 1431: ${pidList.join(', ')}`);
         steps.push({ step: 'kill port 1431', status: 'ok', pids: pidList });
       } else {
@@ -93,7 +94,7 @@ async function restartEnowxaiGateway() {
     // Step 3: enowxai start
     console.log('[restart-gateway] Step 3/3 — enowxai start...');
     try {
-      const { stdout, stderr } = await execAsync('enowxai start', { timeout: 15000 });
+      const { stdout, stderr } = await execAsync('enowxai start', { ...BASH_EXEC_OPTS, timeout: 15000 });
       console.log('[restart-gateway] enowxai start completed');
       if (stdout?.trim()) console.log('[restart-gateway] stdout:', stdout.trim());
       if (stderr && !stderr.includes('already') && !stderr.includes('Starting')) {
