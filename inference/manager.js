@@ -400,30 +400,110 @@ function proxyInferenceRequest(pathname, { method = 'GET', body = null } = {}, r
 // executes tools server-side, then streams the final response.
 const MAX_TOOL_ROUNDS = 3; // Prevent infinite tool loops
 
+/**
+ * Make a non-streaming inference call and return the parsed response.
+ * Handles both JSON and SSE responses (some providers always stream).
+ * For SSE, reconstructs the full message by merging deltas.
+ */
+function callInferenceNonStreaming(payload) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify(payload);
+    const req = requestInference('/v1/chat/completions', { method: 'POST', body });
+    req.setTimeout(UPSTREAM_REQUEST_TIMEOUT_MS, () => req.destroy(new Error('Tool call timeout')));
+
+    let rawData = '';
+    req.on('response', (upRes) => {
+      upRes.setEncoding('utf8');
+      upRes.on('data', (chunk) => { rawData += chunk; });
+      upRes.on('end', () => {
+        if ((upRes.statusCode ?? 500) >= 400) {
+          try { resolve({ status: upRes.statusCode, data: JSON.parse(rawData) }); }
+          catch { resolve({ status: upRes.statusCode, data: { error: rawData.slice(0, 500) } }); }
+          return;
+        }
+
+        // Try parsing as plain JSON first (non-streaming response)
+        try {
+          const parsed = JSON.parse(rawData);
+          resolve({ status: upRes.statusCode, data: parsed });
+          return;
+        } catch { /* Not plain JSON — try SSE parsing below */ }
+
+        // Parse as SSE stream: reconstruct the full message from deltas
+        try {
+          let content = '';
+          let reasoningContent = '';
+          let finishReason = null;
+          const toolCalls = []; // Map of index → { id, type, function: { name, arguments } }
+
+          for (const line of rawData.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (!data || data === '[DONE]') continue;
+
+            const chunk = JSON.parse(data);
+            const delta = chunk.choices?.[0]?.delta;
+            if (!delta) {
+              // Check for non-delta format (some providers return full message)
+              const msg = chunk.choices?.[0]?.message;
+              if (msg) {
+                resolve({ status: 200, data: chunk });
+                return;
+              }
+              finishReason = chunk.choices?.[0]?.finish_reason || finishReason;
+              continue;
+            }
+
+            if (delta.content) content += delta.content;
+            if (delta.reasoning_content) reasoningContent += delta.reasoning_content;
+            if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
+
+            // Accumulate tool_calls deltas
+            if (Array.isArray(delta.tool_calls)) {
+              for (const tc of delta.tool_calls) {
+                const idx = tc.index ?? 0;
+                if (!toolCalls[idx]) {
+                  toolCalls[idx] = { id: tc.id || '', type: 'function', function: { name: '', arguments: '' } };
+                }
+                if (tc.id) toolCalls[idx].id = tc.id;
+                if (tc.function?.name) toolCalls[idx].function.name += tc.function.name;
+                if (tc.function?.arguments) toolCalls[idx].function.arguments += tc.function.arguments;
+              }
+            }
+          }
+
+          // Reconstruct a standard chat completion response
+          const message = { role: 'assistant', content: content || null };
+          if (reasoningContent) message.reasoning_content = reasoningContent;
+          const activeToolCalls = toolCalls.filter(Boolean);
+          if (activeToolCalls.length > 0) message.tool_calls = activeToolCalls;
+
+          resolve({
+            status: 200,
+            data: {
+              choices: [{
+                message,
+                finish_reason: finishReason || (activeToolCalls.length > 0 ? 'tool_calls' : 'stop'),
+              }],
+            },
+          });
+        } catch (sseErr) {
+          reject(new Error(`Failed to parse upstream response: ${sseErr.message}. Raw: ${rawData.slice(0, 300)}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
 async function handleToolAugmentedChat(parsed, res) {
   const toolPayload = injectTools(parsed);
   let currentPayload = toolPayload;
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    // Non-streaming call to check for tool_calls
-    const upstreamBody = JSON.stringify(currentPayload);
-    const upstreamResponse = await new Promise((resolve, reject) => {
-      const req = requestInference('/v1/chat/completions', { method: 'POST', body: upstreamBody });
-      req.setTimeout(UPSTREAM_REQUEST_TIMEOUT_MS, () => req.destroy(new Error('Tool call timeout')));
-
-      let data = '';
-      req.on('response', (upRes) => {
-        upRes.setEncoding('utf8');
-        upRes.on('data', (chunk) => { data += chunk; });
-        upRes.on('end', () => {
-          try { resolve({ status: upRes.statusCode, data: JSON.parse(data) }); }
-          catch { reject(new Error(`Invalid JSON from upstream: ${data.slice(0, 200)}`)); }
-        });
-      });
-      req.on('error', reject);
-      req.write(upstreamBody);
-      req.end();
-    });
+    const upstreamResponse = await callInferenceNonStreaming(currentPayload);
 
     if (upstreamResponse.status >= 400) {
       res.writeHead(upstreamResponse.status, { 'Content-Type': 'application/json' });
@@ -777,7 +857,6 @@ websocketServer.on('connection', (ws) => {
         try {
           const parsed = { ...params };
           delete parsed.tools_enabled;
-          // Ensure system message
           if (Array.isArray(parsed.messages) && !parsed.messages.some((m) => m.role === 'system')) {
             parsed.messages.unshift({ role: 'system', content: 'You are a helpful assistant.' });
           }
@@ -785,29 +864,23 @@ websocketServer.on('connection', (ws) => {
           let currentPayload = toolPayload;
 
           for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-            const upstreamBody = JSON.stringify(currentPayload);
-            const upstreamData = await new Promise((resolve, reject) => {
-              const req = requestInference('/v1/chat/completions', { method: 'POST', body: upstreamBody });
-              req.setTimeout(UPSTREAM_REQUEST_TIMEOUT_MS, () => req.destroy(new Error('timeout')));
-              let data = '';
-              req.on('response', (r) => { r.setEncoding('utf8'); r.on('data', (c) => { data += c; }); r.on('end', () => { try { resolve(JSON.parse(data)); } catch { reject(new Error('Invalid JSON')); } }); });
-              req.on('error', reject);
-              req.write(upstreamBody);
-              req.end();
-            });
+            const upstreamResponse = await callInferenceNonStreaming(currentPayload);
 
-            if (!hasToolCalls(upstreamData)) {
-              // No tool calls — send content as delta
-              const content = upstreamData.choices?.[0]?.message?.content || '';
-              const reasoning = upstreamData.choices?.[0]?.message?.reasoning_content;
+            if (upstreamResponse.status >= 400) {
+              wsSend(ws, { type: 'error', message: upstreamResponse.data?.error || `Upstream error ${upstreamResponse.status}` });
+              return;
+            }
+
+            if (!hasToolCalls(upstreamResponse.data)) {
+              const content = upstreamResponse.data.choices?.[0]?.message?.content || '';
+              const reasoning = upstreamResponse.data.choices?.[0]?.message?.reasoning_content;
               if (reasoning) wsSend(ws, { type: 'delta', delta: reasoning, channel: 'reasoning' });
               wsSend(ws, { type: 'delta', delta: content });
               wsSend(ws, { type: 'done' });
               return;
             }
 
-            // Execute tools
-            const assistantMsg = upstreamData.choices[0].message;
+            const assistantMsg = upstreamResponse.data.choices[0].message;
             log(`[chat-tools-ws] Round ${round + 1}: ${assistantMsg.tool_calls.map(tc => tc.function?.name).join(', ')}`);
             const { assistantMessage, toolResultMessages } = await executeToolCalls(assistantMsg);
             currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
@@ -1153,27 +1226,23 @@ const controlServer = createServer(async (req, res) => {
             let currentPayload = toolPayload;
 
             for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-              const upstreamBody = JSON.stringify(currentPayload);
-              const upstreamData = await new Promise((resolve, reject) => {
-                const r = requestInference('/v1/chat/completions', { method: 'POST', body: upstreamBody });
-                r.setTimeout(UPSTREAM_REQUEST_TIMEOUT_MS, () => r.destroy(new Error('timeout')));
-                let d = '';
-                r.on('response', (up) => { up.setEncoding('utf8'); up.on('data', (c) => { d += c; }); up.on('end', () => { try { resolve(JSON.parse(d)); } catch { reject(new Error('Invalid JSON')); } }); });
-                r.on('error', reject);
-                r.write(upstreamBody);
-                r.end();
-              });
+              const upstreamResponse = await callInferenceNonStreaming(currentPayload);
 
-              if (!hasToolCalls(upstreamData)) {
-                const content = upstreamData.choices?.[0]?.message?.content || '';
-                const reasoning = upstreamData.choices?.[0]?.message?.reasoning_content;
+              if (upstreamResponse.status >= 400) {
+                res.write(`data: ${JSON.stringify({ type: 'error', message: upstreamResponse.data?.error || `Upstream error ${upstreamResponse.status}` })}\n\n`);
+                return res.end();
+              }
+
+              if (!hasToolCalls(upstreamResponse.data)) {
+                const content = upstreamResponse.data.choices?.[0]?.message?.content || '';
+                const reasoning = upstreamResponse.data.choices?.[0]?.message?.reasoning_content;
                 if (reasoning) res.write(`data: ${JSON.stringify({ type: 'delta', delta: reasoning, channel: 'reasoning' })}\n\n`);
                 res.write(`data: ${JSON.stringify({ type: 'delta', delta: content })}\n\n`);
                 res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
                 return res.end();
               }
 
-              const assistantMsg = upstreamData.choices[0].message;
+              const assistantMsg = upstreamResponse.data.choices[0].message;
               log(`[chat-tools-sse] Round ${round + 1}: ${assistantMsg.tool_calls.map(tc => tc.function?.name).join(', ')}`);
               const { assistantMessage, toolResultMessages } = await executeToolCalls(assistantMsg);
               currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
