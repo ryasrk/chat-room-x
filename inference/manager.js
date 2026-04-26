@@ -20,6 +20,7 @@ import { sendCompressedJson } from './compression.js';
 import { getCacheStats, closeDatabase } from './db/database.js';
 import { handleAgentRoomUpgrade } from './agentRoom/wsBridge.js';
 import { buildChatCompletionPayload, parseSseLine, splitSseLines } from './streamProxy.js';
+import { shouldUseTools, injectTools, buildFollowUpPayload, executeToolCalls, hasToolCalls } from './chatTools.js';
 import { routeApiRequest } from './routes/apiRouter.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -393,6 +394,82 @@ function proxyInferenceRequest(pathname, { method = 'GET', body = null } = {}, r
   upstreamRequest.end();
 }
 
+// ── Tool-Augmented Chat Handler ────────────────────────────────
+// Intercepts chat completions when tools_enabled is true.
+// Makes a non-streaming call first to check for tool_calls,
+// executes tools server-side, then streams the final response.
+const MAX_TOOL_ROUNDS = 3; // Prevent infinite tool loops
+
+async function handleToolAugmentedChat(parsed, res) {
+  const toolPayload = injectTools(parsed);
+  let currentPayload = toolPayload;
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    // Non-streaming call to check for tool_calls
+    const upstreamBody = JSON.stringify(currentPayload);
+    const upstreamResponse = await new Promise((resolve, reject) => {
+      const req = requestInference('/v1/chat/completions', { method: 'POST', body: upstreamBody });
+      req.setTimeout(UPSTREAM_REQUEST_TIMEOUT_MS, () => req.destroy(new Error('Tool call timeout')));
+
+      let data = '';
+      req.on('response', (upRes) => {
+        upRes.setEncoding('utf8');
+        upRes.on('data', (chunk) => { data += chunk; });
+        upRes.on('end', () => {
+          try { resolve({ status: upRes.statusCode, data: JSON.parse(data) }); }
+          catch { reject(new Error(`Invalid JSON from upstream: ${data.slice(0, 200)}`)); }
+        });
+      });
+      req.on('error', reject);
+      req.write(upstreamBody);
+      req.end();
+    });
+
+    if (upstreamResponse.status >= 400) {
+      res.writeHead(upstreamResponse.status, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(upstreamResponse.data));
+    }
+
+    // Check if the LLM wants to call tools
+    if (!hasToolCalls(upstreamResponse.data)) {
+      // No tool calls — stream the content as SSE to match expected format
+      const content = upstreamResponse.data.choices?.[0]?.message?.content || '';
+      const reasoning = upstreamResponse.data.choices?.[0]?.message?.reasoning_content;
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      });
+      // Emit as a single SSE delta to match streaming format
+      if (reasoning) {
+        const reasoningChunk = { choices: [{ delta: { reasoning_content: reasoning } }] };
+        res.write(`data: ${JSON.stringify(reasoningChunk)}\n\n`);
+      }
+      const chunk = { choices: [{ delta: { content } }] };
+      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      res.write('data: [DONE]\n\n');
+      return res.end();
+    }
+
+    // Execute tool calls
+    const assistantMsg = upstreamResponse.data.choices[0].message;
+    log(`[chat-tools] Round ${round + 1}: executing ${assistantMsg.tool_calls.length} tool(s): ${assistantMsg.tool_calls.map(tc => tc.function?.name).join(', ')}`);
+
+    const { assistantMessage, toolResultMessages } = await executeToolCalls(assistantMsg);
+
+    // Build follow-up payload with tool results
+    currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
+    // Next round will check if LLM wants more tools or gives final answer
+  }
+
+  // After max rounds, do a final streaming call without tools
+  delete currentPayload.tools;
+  delete currentPayload.tool_choice;
+  currentPayload.stream = true;
+  const finalBody = JSON.stringify(currentPayload);
+  return proxyInferenceRequest('/v1/chat/completions', { method: 'POST', body: finalBody }, res);
+}
+
 function checkInferenceHealth() {
   return new Promise((resolve) => {
     if (!isInferenceReady()) {
@@ -694,6 +771,63 @@ websocketServer.on('connection', (ws) => {
     lastRequestAt = now;
     totalRequests += 1;
 
+    // ── Tool-augmented chat via WebSocket ──────────────────
+    if (shouldUseTools(params)) {
+      (async () => {
+        try {
+          const parsed = { ...params };
+          delete parsed.tools_enabled;
+          // Ensure system message
+          if (Array.isArray(parsed.messages) && !parsed.messages.some((m) => m.role === 'system')) {
+            parsed.messages.unshift({ role: 'system', content: 'You are a helpful assistant.' });
+          }
+          const toolPayload = injectTools(parsed);
+          let currentPayload = toolPayload;
+
+          for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+            const upstreamBody = JSON.stringify(currentPayload);
+            const upstreamData = await new Promise((resolve, reject) => {
+              const req = requestInference('/v1/chat/completions', { method: 'POST', body: upstreamBody });
+              req.setTimeout(UPSTREAM_REQUEST_TIMEOUT_MS, () => req.destroy(new Error('timeout')));
+              let data = '';
+              req.on('response', (r) => { r.setEncoding('utf8'); r.on('data', (c) => { data += c; }); r.on('end', () => { try { resolve(JSON.parse(data)); } catch { reject(new Error('Invalid JSON')); } }); });
+              req.on('error', reject);
+              req.write(upstreamBody);
+              req.end();
+            });
+
+            if (!hasToolCalls(upstreamData)) {
+              // No tool calls — send content as delta
+              const content = upstreamData.choices?.[0]?.message?.content || '';
+              const reasoning = upstreamData.choices?.[0]?.message?.reasoning_content;
+              if (reasoning) wsSend(ws, { type: 'delta', delta: reasoning, channel: 'reasoning' });
+              wsSend(ws, { type: 'delta', delta: content });
+              wsSend(ws, { type: 'done' });
+              return;
+            }
+
+            // Execute tools
+            const assistantMsg = upstreamData.choices[0].message;
+            log(`[chat-tools-ws] Round ${round + 1}: ${assistantMsg.tool_calls.map(tc => tc.function?.name).join(', ')}`);
+            const { assistantMessage, toolResultMessages } = await executeToolCalls(assistantMsg);
+            currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
+          }
+
+          // After max rounds, stream final without tools
+          delete currentPayload.tools;
+          delete currentPayload.tool_choice;
+          currentPayload.stream = true;
+          const entry = { type: 'ws', ws, params: currentPayload, cleanupRef: null, inFlight: false };
+          activeEntry = entry;
+          if (!enqueueRequest(entry)) wsSend(ws, { type: 'error', message: 'Queue full' });
+        } catch (err) {
+          log(`[chat-tools-ws] Error: ${err.message}`);
+          wsSend(ws, { type: 'error', message: `Tool error: ${err.message}` });
+        }
+      })();
+      return;
+    }
+
     const entry = { type: 'ws', ws, params, cleanupRef: null, inFlight: false };
     activeEntry = entry;
 
@@ -841,6 +975,21 @@ const controlServer = createServer(async (req, res) => {
           const parsed = JSON.parse(rawBody);
           if (Array.isArray(parsed.messages) && !parsed.messages.some((m) => m.role === 'system')) {
             parsed.messages.unshift({ role: 'system', content: 'You are a helpful assistant.' });
+          }
+
+          // ── Tool-augmented chat ──────────────────────────────
+          // When dashboard sends tools_enabled: true, intercept the request
+          // to inject tool definitions and handle tool execution server-side.
+          if (shouldUseTools(parsed)) {
+            try {
+              return await handleToolAugmentedChat(parsed, res);
+            } catch (toolErr) {
+              log(`[chat-tools] Error: ${toolErr.message}`);
+              // Fall through to normal proxy on tool error
+              delete parsed.tools_enabled;
+              rawBody = JSON.stringify(parsed);
+            }
+          } else {
             rawBody = JSON.stringify(parsed);
           }
         } catch { /* leave rawBody as-is if not valid JSON */ }
@@ -983,6 +1132,70 @@ const controlServer = createServer(async (req, res) => {
       if (!Array.isArray(params.messages) || params.messages.length === 0) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: 'The payload must include a non-empty messages array.' }));
+      }
+
+      // ── Tool-augmented SSE chat ──────────────────────────
+      if (shouldUseTools(params)) {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': getCorsOrigin(req.headers.origin || ''),
+        });
+        (async () => {
+          try {
+            const parsed = { ...params };
+            delete parsed.tools_enabled;
+            if (!parsed.messages.some((m) => m.role === 'system')) {
+              parsed.messages.unshift({ role: 'system', content: 'You are a helpful assistant.' });
+            }
+            const toolPayload = injectTools(parsed);
+            let currentPayload = toolPayload;
+
+            for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+              const upstreamBody = JSON.stringify(currentPayload);
+              const upstreamData = await new Promise((resolve, reject) => {
+                const r = requestInference('/v1/chat/completions', { method: 'POST', body: upstreamBody });
+                r.setTimeout(UPSTREAM_REQUEST_TIMEOUT_MS, () => r.destroy(new Error('timeout')));
+                let d = '';
+                r.on('response', (up) => { up.setEncoding('utf8'); up.on('data', (c) => { d += c; }); up.on('end', () => { try { resolve(JSON.parse(d)); } catch { reject(new Error('Invalid JSON')); } }); });
+                r.on('error', reject);
+                r.write(upstreamBody);
+                r.end();
+              });
+
+              if (!hasToolCalls(upstreamData)) {
+                const content = upstreamData.choices?.[0]?.message?.content || '';
+                const reasoning = upstreamData.choices?.[0]?.message?.reasoning_content;
+                if (reasoning) res.write(`data: ${JSON.stringify({ type: 'delta', delta: reasoning, channel: 'reasoning' })}\n\n`);
+                res.write(`data: ${JSON.stringify({ type: 'delta', delta: content })}\n\n`);
+                res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+                return res.end();
+              }
+
+              const assistantMsg = upstreamData.choices[0].message;
+              log(`[chat-tools-sse] Round ${round + 1}: ${assistantMsg.tool_calls.map(tc => tc.function?.name).join(', ')}`);
+              const { assistantMessage, toolResultMessages } = await executeToolCalls(assistantMsg);
+              currentPayload = buildFollowUpPayload(currentPayload, assistantMessage, toolResultMessages);
+            }
+
+            // After max rounds, stream final
+            delete currentPayload.tools;
+            delete currentPayload.tool_choice;
+            currentPayload.stream = true;
+            const entry = { type: 'sse', res, params: currentPayload, disconnected: false, cleanupRef: null, inFlight: false };
+            req.on('close', () => { entry.disconnected = true; });
+            if (!enqueueRequest(entry)) {
+              res.write(`data: ${JSON.stringify({ type: 'error', message: 'Queue full' })}\n\n`);
+              res.end();
+            }
+          } catch (err) {
+            log(`[chat-tools-sse] Error: ${err.message}`);
+            res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+            res.end();
+          }
+        })();
+        return;
       }
 
       res.writeHead(200, {

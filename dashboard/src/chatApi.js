@@ -446,6 +446,7 @@ export async function sendToAPI() {
       max_tokens: state.settings.maxTokens,
       temperature: state.settings.temperature,
       chat_template_kwargs: { enable_thinking: state.settings.enableThinking },
+      tools_enabled: true, // Enable server-side tool execution (web_search, calculator, etc.)
     }, {
       enableThinking: state.settings.enableThinking,
       selectedModel: state.settings.model,
