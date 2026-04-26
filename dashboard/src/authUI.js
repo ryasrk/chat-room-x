@@ -214,7 +214,7 @@ let userMenuEl = null;
 let profileModal = null;
 
 export function initAuthUI() {
-  const user = initAuth();
+  const { user, ready } = initAuth();
 
   // Create auth modal
   authModal = createAuthModal();
@@ -428,10 +428,26 @@ export function initAuthUI() {
   });
 
   // Initial state — gate the app behind auth
+  // Show optimistically if we have a cached user (avoids flash of login screen)
   if (user) {
     scopeUserStorage(user.id);
     updateUserUI(user);
     showApp();
+
+    // If token was expired, `ready` will resolve after refresh attempt
+    ready.then((validatedUser) => {
+      if (validatedUser) {
+        // Refresh succeeded — update UI with fresh user data
+        scopeUserStorage(validatedUser.id);
+        updateUserUI(validatedUser);
+      } else {
+        // Refresh failed — token truly expired, must re-login
+        updateUserUI(null);
+        hideApp();
+        showAuthModal();
+        showToast('Session expired. Please sign in again.', 'info');
+      }
+    });
   } else {
     updateUserUI(null);
     hideApp();

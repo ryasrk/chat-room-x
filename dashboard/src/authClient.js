@@ -21,7 +21,9 @@ function getStoredTokens() {
 }
 
 function storeTokens(tokens) {
-  localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens));
+  // Persist stored_at so we can compute remaining TTL on page reload
+  const enriched = { ...tokens, stored_at: Date.now() };
+  localStorage.setItem(TOKEN_KEY, JSON.stringify(enriched));
   scheduleRefresh(tokens.expires_in || 900);
 }
 
@@ -47,23 +49,27 @@ function storeUser(user) {
 // ── API Helpers ────────────────────────────────────────────────
 
 async function apiPost(path, body, auth = false) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (auth) {
-    const tokens = getStoredTokens();
-    if (tokens?.access_token) {
-      headers['Authorization'] = `Bearer ${tokens.access_token}`;
+  const doFetch = async () => {
+    const headers = { 'Content-Type': 'application/json' };
+    if (auth) {
+      const tokens = getStoredTokens();
+      if (tokens?.access_token) {
+        headers['Authorization'] = `Bearer ${tokens.access_token}`;
+      }
     }
-  }
 
-  const res = await fetch(path, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
+    const res = await fetch(path, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
+  };
+
+  return auth ? withAutoRefresh(doFetch, path) : doFetch();
 }
 
 /** In-flight GET request deduplication map */
@@ -75,7 +81,7 @@ async function apiGet(path) {
     return _inflightGets.get(path);
   }
 
-  const promise = (async () => {
+  const doFetch = async () => {
     const tokens = getStoredTokens();
     const headers = {};
     if (tokens?.access_token) {
@@ -86,7 +92,9 @@ async function apiGet(path) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
     return data;
-  })();
+  };
+
+  const promise = withAutoRefresh(doFetch, path);
 
   _inflightGets.set(path, promise);
   try {
@@ -97,101 +105,167 @@ async function apiGet(path) {
 }
 
 async function apiGetBlob(path) {
-  const tokens = getStoredTokens();
-  const headers = {};
-  if (tokens?.access_token) {
-    headers['Authorization'] = `Bearer ${tokens.access_token}`;
-  }
+  const doFetch = async () => {
+    const tokens = getStoredTokens();
+    const headers = {};
+    if (tokens?.access_token) {
+      headers['Authorization'] = `Bearer ${tokens.access_token}`;
+    }
 
-  const res = await fetch(path, { headers });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Request failed (${res.status})`);
-  }
+    const res = await fetch(path, { headers });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Request failed (${res.status})`);
+    }
 
-  return {
-    blob: await res.blob(),
-    disposition: res.headers.get('content-disposition') || '',
+    return {
+      blob: await res.blob(),
+      disposition: res.headers.get('content-disposition') || '',
+    };
   };
+
+  return withAutoRefresh(doFetch, path);
 }
 
 async function apiDelete(path) {
-  const tokens = getStoredTokens();
-  const headers = {};
-  if (tokens?.access_token) {
-    headers['Authorization'] = `Bearer ${tokens.access_token}`;
-  }
+  const doFetch = async () => {
+    const tokens = getStoredTokens();
+    const headers = {};
+    if (tokens?.access_token) {
+      headers['Authorization'] = `Bearer ${tokens.access_token}`;
+    }
 
-  const res = await fetch(path, { method: 'DELETE', headers });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
+    const res = await fetch(path, { method: 'DELETE', headers });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
+  };
+
+  return withAutoRefresh(doFetch, path);
 }
 
 async function apiPatch(path, body) {
-  const tokens = getStoredTokens();
-  const headers = { 'Content-Type': 'application/json' };
-  if (tokens?.access_token) {
-    headers['Authorization'] = `Bearer ${tokens.access_token}`;
-  }
+  const doFetch = async () => {
+    const tokens = getStoredTokens();
+    const headers = { 'Content-Type': 'application/json' };
+    if (tokens?.access_token) {
+      headers['Authorization'] = `Bearer ${tokens.access_token}`;
+    }
 
-  const res = await fetch(path, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify(body),
-  });
+    const res = await fetch(path, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(body),
+    });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
+  };
+
+  return withAutoRefresh(doFetch, path);
 }
 
 async function apiPut(path, body) {
-  const tokens = getStoredTokens();
-  const headers = { 'Content-Type': 'application/json' };
-  if (tokens?.access_token) {
-    headers['Authorization'] = `Bearer ${tokens.access_token}`;
-  }
+  const doFetch = async () => {
+    const tokens = getStoredTokens();
+    const headers = { 'Content-Type': 'application/json' };
+    if (tokens?.access_token) {
+      headers['Authorization'] = `Bearer ${tokens.access_token}`;
+    }
 
-  const res = await fetch(path, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(body),
-  });
+    const res = await fetch(path, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(body),
+    });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
+  };
+
+  return withAutoRefresh(doFetch, path);
 }
 
 // ── Token Refresh ──────────────────────────────────────────────
 
+/** Compute remaining seconds until access token expires (using stored_at). */
+function getRemainingTtl() {
+  const tokens = getStoredTokens();
+  if (!tokens?.stored_at || !tokens?.expires_in) return 0;
+  const elapsed = (Date.now() - tokens.stored_at) / 1000;
+  return Math.max(0, tokens.expires_in - elapsed);
+}
+
 function scheduleRefresh(expiresInSeconds) {
   if (_refreshTimer) clearTimeout(_refreshTimer);
-  // Refresh 60 seconds before expiry
-  const ms = Math.max((expiresInSeconds - 60) * 1000, 10000);
+  // Refresh 60 seconds before expiry, minimum 5s
+  const ms = Math.max((expiresInSeconds - 60) * 1000, 5000);
   _refreshTimer = setTimeout(refreshAccessToken, ms);
 }
 
+let _refreshPromise = null;
+
+/**
+ * Refresh the access token using the stored refresh token.
+ * Deduplicates concurrent refresh attempts (e.g. multiple 401s at once).
+ * @returns {Promise<boolean>} true if refresh succeeded
+ */
 async function refreshAccessToken() {
-  const tokens = getStoredTokens();
-  if (!tokens?.refresh_token) {
-    handleLogout();
-    return;
-  }
+  // Deduplicate: if a refresh is already in-flight, piggyback on it
+  if (_refreshPromise) return _refreshPromise;
+
+  _refreshPromise = (async () => {
+    const tokens = getStoredTokens();
+    if (!tokens?.refresh_token) {
+      handleLogout();
+      return false;
+    }
+
+    try {
+      const data = await apiPost('/api/auth/refresh', { refresh_token: tokens.refresh_token });
+      storeTokens(data.tokens);
+      storeUser(data.user);
+      return true;
+    } catch {
+      handleLogout();
+      return false;
+    }
+  })();
 
   try {
-    const data = await apiPost('/api/auth/refresh', { refresh_token: tokens.refresh_token });
-    storeTokens(data.tokens);
-    storeUser(data.user);
-  } catch {
-    handleLogout();
+    return await _refreshPromise;
+  } finally {
+    _refreshPromise = null;
   }
 }
 
 function handleLogout() {
   clearTokens();
   if (_onAuthChange) _onAuthChange(null);
+}
+
+/**
+ * Wrap an API call so that on 401 it auto-refreshes the token and retries once.
+ * Skips retry for auth endpoints themselves to avoid infinite loops.
+ */
+async function withAutoRefresh(apiCall, path) {
+  try {
+    return await apiCall();
+  } catch (err) {
+    // Only retry on 401 and not on auth endpoints (avoid infinite loop)
+    if (
+      err.message?.includes('(401)') &&
+      !path.startsWith('/api/auth/')
+    ) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        return await apiCall(); // Retry with new token
+      }
+    }
+    throw err;
+  }
 }
 
 // ── Public API ─────────────────────────────────────────────────
@@ -546,10 +620,37 @@ export async function removeRoomSkill(roomId, skillId) {
 
 // ── Init ───────────────────────────────────────────────────────
 
+/**
+ * Initialize auth on page load.
+ * - If tokens exist and access token is still valid → schedule normal refresh.
+ * - If tokens exist but access token is expired → proactively refresh NOW.
+ * - If no tokens → return null (will show login).
+ *
+ * @returns {{ user: object|null, ready: Promise<object|null> }}
+ *   `user`  — cached user (may be stale if token expired)
+ *   `ready` — resolves to the validated user after any needed refresh
+ */
 export function initAuth() {
   const tokens = getStoredTokens();
-  if (tokens?.access_token) {
-    scheduleRefresh(tokens.expires_in || 900);
+  if (!tokens?.access_token) {
+    return { user: null, ready: Promise.resolve(null) };
   }
-  return getStoredUser();
+
+  const remaining = getRemainingTtl();
+
+  if (remaining > 60) {
+    // Token still valid — schedule refresh for later
+    scheduleRefresh(remaining);
+    const user = getStoredUser();
+    return { user, ready: Promise.resolve(user) };
+  }
+
+  // Token expired or about to expire — refresh immediately
+  const user = getStoredUser(); // optimistic (show UI fast)
+  const ready = refreshAccessToken().then((ok) => {
+    if (ok) return getStoredUser();
+    return null; // refresh failed → must re-login
+  });
+
+  return { user, ready };
 }
