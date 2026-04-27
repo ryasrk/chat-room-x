@@ -19,9 +19,7 @@
  * Requires: server running on localhost:18247
  */
 
-const base = 'http://localhost:18247';
-const username = 'ryasrk';
-const password = 'Ryas4321';
+import { base, username, password } from './loadE2eEnv.mjs';
 const roomName = `Flow Test ${Date.now()}`;
 
 let token = '';

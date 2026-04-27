@@ -21,6 +21,7 @@ fi
 
 CMD="${1:-start}"
 CONTROL_PORT="${CONTROL_PORT:-18247}"
+DASHBOARD_PORT="${DASHBOARD_PORT:-7391}"
 
 # ── Resolve JS runtime (bun preferred, node fallback) ──────────
 [[ -d "$HOME/.bun/bin" ]] && export PATH="$HOME/.bun/bin:$PATH"
@@ -41,8 +42,8 @@ stop_all() {
     echo -e "${YELLOW}Stopping all services...${NC}"
     pkill -f "bun.*inference/manager\.js" 2>/dev/null && echo "  Manager stopped." || true
     pkill -f "node.*inference/manager\.js" 2>/dev/null || true
-    pkill -f "vite.*--port 7391" 2>/dev/null || true
-    lsof -ti:7391 2>/dev/null | xargs kill 2>/dev/null || true
+    pkill -f "vite.*--port ${DASHBOARD_PORT}" 2>/dev/null || true
+    lsof -ti:"${DASHBOARD_PORT}" 2>/dev/null | xargs kill 2>/dev/null || true
     echo -e "${GREEN}All services stopped.${NC}"
 }
 
@@ -61,7 +62,7 @@ case "$CMD" in
             echo -e "  Manager:   ${RED}stopped${NC}"
         fi
         if pgrep -f "vite" > /dev/null 2>&1; then
-            echo -e "  Dashboard: ${GREEN}running${NC} → http://localhost:7391"
+            echo -e "  Dashboard: ${GREEN}running${NC} → http://localhost:${DASHBOARD_PORT}"
         else
             echo -e "  Dashboard: ${RED}stopped${NC}"
         fi
@@ -102,7 +103,7 @@ fi
 # ── Stop existing services ─────────────────────────────────────
 pkill -f "bun.*inference/manager\.js" 2>/dev/null || true
 pkill -f "node.*inference/manager\.js" 2>/dev/null || true
-lsof -ti:7391 2>/dev/null | xargs kill 2>/dev/null || true
+lsof -ti:"${DASHBOARD_PORT}" 2>/dev/null | xargs kill 2>/dev/null || true
 
 sleep 1
 
@@ -135,7 +136,7 @@ fi
 # ── Start Dashboard ────────────────────────────────────────────
 echo ""
 echo "Starting dashboard..."
-(cd dashboard && npx vite --port 7391 --host) &
+(cd dashboard && npx vite --port "${DASHBOARD_PORT}" --host) &
 DASHBOARD_PID=$!
 
 sleep 2
@@ -143,7 +144,7 @@ sleep 2
 echo ""
 echo -e "${GREEN}═══ All services running (cloud mode) ═══${NC}"
 echo ""
-echo -e "  Dashboard:  ${CYAN}http://localhost:7391${NC}"
+echo -e "  Dashboard:  ${CYAN}http://localhost:${DASHBOARD_PORT}${NC}"
 echo -e "  Manager:    http://localhost:${CONTROL_PORT}"
 echo -e "  Provider:   ${ENOWXAI_BASE_URL}"
 echo -e "  Mode:       ${GREEN}enowxai (cloud-only)${NC}"

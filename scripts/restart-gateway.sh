@@ -17,7 +17,7 @@ CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-GATEWAY_PORT=1431
+GATEWAY_PORT="${ENOWXAI_GATEWAY_PORT:-1431}"
 CMD="${1:-restart}"
 
 log_info()  { echo -e "${CYAN}[INFO]${NC}  $*"; }

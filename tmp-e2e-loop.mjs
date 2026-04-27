@@ -3,9 +3,7 @@
  * Tests consistency of xa/xb classification and self-mention stripping
  */
 
-const base = 'http://localhost:18247';
-const username = 'ryasrk';
-const password = 'Ryas4321';
+import { base, username, password } from './loadE2eEnv.mjs';
 
 let token = '';
 let totalPassed = 0;

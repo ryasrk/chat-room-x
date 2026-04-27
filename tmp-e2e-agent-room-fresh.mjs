@@ -1,6 +1,4 @@
-const base = 'http://localhost:18247';
-const username = 'ryasrk';
-const password = 'Ryas4321';
+import { base, dashboardUrl, username, password } from './loadE2eEnv.mjs';
 const roomName = `E2E Calculator ${Date.now()}`;
 const prompt = '@planner plan and build a simple calculator, hand off implementation and review, use tools as needed, and summarize what you created.';
 
@@ -118,7 +116,7 @@ async function main() {
   }
 
   console.log(JSON.stringify({
-    url: 'http://localhost:7391',
+    url: dashboardUrl,
     projectRoomId,
     agentRoomId,
     roomName,

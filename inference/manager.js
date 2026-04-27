@@ -33,6 +33,7 @@ const MAX_STREAM_BUFFER_SIZE = 64 * 1024;
 const STREAM_REQUEST_COOLDOWN_MS = 250;
 const UPSTREAM_REQUEST_TIMEOUT_MS = 45_000;
 
+const DASHBOARD_PORT = process.env.DASHBOARD_PORT || '7391';
 const DASHBOARD_ORIGIN = process.env.DASHBOARD_ORIGIN || '';
 const CONTROL_API_KEY = process.env.CONTROL_API_KEY || '';
 const ENOWXAI_BASE_URL = process.env.ENOWXAI_BASE_URL || '';
@@ -52,6 +53,7 @@ function sendJson(req, res, statusCode, data, extraHeaders = {}) {
 // ── Gateway Restart Helper ─────────────────────────────────────
 const execAsync = promisify(exec);
 const BASH_EXEC_OPTS = { shell: '/bin/bash', env: { ...process.env, PATH: `${process.env.HOME}/.local/bin:${process.env.PATH}` } };
+const ENOWXAI_GATEWAY_PORT = process.env.ENOWXAI_GATEWAY_PORT || '1431';
 
 async function restartEnowxaiGateway() {
   const steps = [];
@@ -70,23 +72,23 @@ async function restartEnowxaiGateway() {
       // Continue — we'll force-kill next
     }
 
-    // Step 2: Kill port 1431 PID
-    console.log('[restart-gateway] Step 2/3 — killing port 1431 PID...');
+    // Step 2: Kill gateway port PID
+    console.log(`[restart-gateway] Step 2/3 — killing port ${ENOWXAI_GATEWAY_PORT} PID...`);
     try {
-      const { stdout: pids } = await execAsync('lsof -ti:1431 2>/dev/null || true', BASH_EXEC_OPTS);
+      const { stdout: pids } = await execAsync(`lsof -ti:${ENOWXAI_GATEWAY_PORT} 2>/dev/null || true`, BASH_EXEC_OPTS);
       const pidList = pids.trim().split('\n').filter(Boolean);
 
       if (pidList.length > 0) {
-        await execAsync(`lsof -ti:1431 | xargs kill -9 2>/dev/null || true`, BASH_EXEC_OPTS);
-        console.log(`[restart-gateway] Killed PIDs on port 1431: ${pidList.join(', ')}`);
-        steps.push({ step: 'kill port 1431', status: 'ok', pids: pidList });
+        await execAsync(`lsof -ti:${ENOWXAI_GATEWAY_PORT} | xargs kill -9 2>/dev/null || true`, BASH_EXEC_OPTS);
+        console.log(`[restart-gateway] Killed PIDs on port ${ENOWXAI_GATEWAY_PORT}: ${pidList.join(', ')}`);
+        steps.push({ step: `kill port ${ENOWXAI_GATEWAY_PORT}`, status: 'ok', pids: pidList });
       } else {
-        console.log('[restart-gateway] No process found on port 1431');
-        steps.push({ step: 'kill port 1431', status: 'ok', detail: 'no process on port' });
+        console.log(`[restart-gateway] No process found on port ${ENOWXAI_GATEWAY_PORT}`);
+        steps.push({ step: `kill port ${ENOWXAI_GATEWAY_PORT}`, status: 'ok', detail: 'no process on port' });
       }
     } catch (killErr) {
-      console.warn('[restart-gateway] Kill port 1431 warning:', killErr.message);
-      steps.push({ step: 'kill port 1431', status: 'warning', detail: killErr.message });
+      console.warn(`[restart-gateway] Kill port ${ENOWXAI_GATEWAY_PORT} warning:`, killErr.message);
+      steps.push({ step: `kill port ${ENOWXAI_GATEWAY_PORT}`, status: 'warning', detail: killErr.message });
     }
 
     // Wait for port to be released
@@ -151,10 +153,8 @@ function getDashboardOrigins() {
     );
   } else {
     origins.push(
-      'http://localhost:7391',
-      'http://localhost:7392',
-      'http://127.0.0.1:7391',
-      'http://127.0.0.1:7392',
+      `http://localhost:${DASHBOARD_PORT}`,
+      `http://127.0.0.1:${DASHBOARD_PORT}`,
     );
   }
 
@@ -172,7 +172,7 @@ function getCorsOrigin(requestOrigin) {
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
     return requestOrigin;
   }
-  return allowedOrigins[0] || 'http://localhost:7391';
+  return allowedOrigins[0] || `http://localhost:${DASHBOARD_PORT}`;
 }
 let activeWebSocketConnections = 0;
 // Cloud providers handle concurrency — generous parallel slots

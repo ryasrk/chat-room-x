@@ -1,6 +1,4 @@
-const base = 'http://localhost:18247';
-const username = 'ryasrk';
-const password = 'Ryas4321';
+import { base, username, password } from './loadE2eEnv.mjs';
 const prompt = '@planner plan and build a simple calculator, hand off implementation and review, use tools as needed, and summarize what you created.';
 
 async function api(path, { method = 'GET', body, token } = {}) {
