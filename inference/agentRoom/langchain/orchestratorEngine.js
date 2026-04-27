@@ -700,12 +700,15 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
         postedMessages,
       };
     } catch (error) {
-      saveAgentRoomLog(roomId, agent.name, 'error', 'Agent execution failed');
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[${agent.name}] runAgentTurn failed:`, errMsg);
+      if (error?.stack) console.error(`[${agent.name}] Stack:`, error.stack);
+      saveAgentRoomLog(roomId, agent.name, 'error', `Agent execution failed: ${errMsg}`);
 
       const errorMessage = this.postAgentMessage(
         roomId,
         agent.name,
-        'I hit an error and could not finish the task.',
+        `❌ I hit an error and could not finish the task.\n\nError: \`${errMsg}\``,
         'error',
       );
       if (errorMessage) postedMessages.push(errorMessage);
@@ -717,7 +720,7 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
       });
       this.emitRoomEvent(roomId, 'agent_room:error', {
         agent_name: agent.name,
-        message: 'Agent execution failed',
+        message: `Agent execution failed: ${errMsg}`,
       });
 
       return {
@@ -924,13 +927,32 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
         return;
       }
 
-      failXbTask(roomId, agent.name, error.message);
-      saveAgentRoomLog(roomId, agent.name, 'error', 'xb background execution failed');
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[${agent.name}] xb background failed:`, errMsg);
+      if (error?.stack) console.error(`[${agent.name}] Stack:`, error.stack);
+
+      failXbTask(roomId, agent.name, errMsg);
+      saveAgentRoomLog(roomId, agent.name, 'error', `xb background execution failed: ${errMsg}`);
+
+      // Build user-friendly error message
+      const isTimeout = /timed? ?out/i.test(errMsg);
+      const isConnectionError = /ECONNREFUSED|ECONNRESET|ENOTFOUND|socket hang up/i.test(errMsg);
+      const isApiError = /Model API error|status(Code)?.*[45]\d\d/i.test(errMsg);
+      let userMessage;
+      if (isTimeout) {
+        userMessage = '⏱ The AI provider timed out. Please try again in a moment.';
+      } else if (isConnectionError) {
+        userMessage = `🔌 Could not connect to the AI provider.\n\nError: \`${errMsg}\``;
+      } else if (isApiError) {
+        userMessage = `⚠️ The AI provider returned an error:\n\n\`${errMsg}\``;
+      } else {
+        userMessage = `❌ I hit an error while working on the task.\n\nError: \`${errMsg}\`\n\nPlease try again or check the server logs.`;
+      }
 
       const errorMessage = this.postAgentMessage(
         roomId,
         agent.name,
-        'I hit an error while working on the task. Please try again.',
+        userMessage,
         'error',
       );
 
@@ -941,7 +963,7 @@ export class LangChainAgentRoomOrchestrator extends EventEmitter {
       });
       this.emitRoomEvent(roomId, 'agent_room:error', {
         agent_name: agent.name,
-        message: 'xb background execution failed',
+        message: `xb background execution failed: ${errMsg}`,
       });
     } finally {
       // Clean up the AbortController for this room

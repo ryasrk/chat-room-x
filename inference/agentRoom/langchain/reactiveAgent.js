@@ -1257,7 +1257,27 @@ export async function runReactiveAgentTurn({
       }
     }
   } catch (error) {
-    finalMessage = 'I encountered an internal error while working on that task.';
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[${agent.name}] Agent turn failed:`, errMsg);
+    if (error?.stack) console.error(`[${agent.name}] Stack:`, error.stack);
+
+    // Provide a user-friendly but informative error message
+    const isTimeout = /timed? ?out/i.test(errMsg);
+    const isApiError = /Model API error|status(Code)?.*[45]\d\d/i.test(errMsg);
+    const isConnectionError = /ECONNREFUSED|ECONNRESET|ENOTFOUND|socket hang up/i.test(errMsg);
+    const isAborted = /aborted|cancelled/i.test(errMsg);
+
+    if (isAborted) {
+      finalMessage = '⏹ Work was stopped.';
+    } else if (isTimeout) {
+      finalMessage = '⏱ The request to the AI provider timed out. The server might be overloaded — please try again in a moment.';
+    } else if (isConnectionError) {
+      finalMessage = `🔌 Could not connect to the AI provider. Please check that the provider is running and accessible.\n\nError: ${errMsg}`;
+    } else if (isApiError) {
+      finalMessage = `⚠️ The AI provider returned an error:\n\n\`${errMsg}\`\n\nThis usually means the model is temporarily unavailable or the request was rejected.`;
+    } else {
+      finalMessage = `❌ I encountered an error while working on that task.\n\nError: \`${errMsg}\`\n\nPlease try again or check the server logs for details.`;
+    }
   }
 
   if (!finalMessage) {
