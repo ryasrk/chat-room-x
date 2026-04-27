@@ -483,6 +483,23 @@ function parseAnthropicResponse(data) {
   };
 }
 
+function fixArrayItemsRecursive(schema) {
+  if (!schema || typeof schema !== 'object') return schema;
+  // OpenAI requires 'items' on array types — add a default if missing
+  if (schema.type === 'array' && !schema.items) {
+    schema.items = { type: 'string' };
+  }
+  if (schema.properties && typeof schema.properties === 'object') {
+    for (const val of Object.values(schema.properties)) {
+      fixArrayItemsRecursive(val);
+    }
+  }
+  if (schema.items && typeof schema.items === 'object') {
+    fixArrayItemsRecursive(schema.items);
+  }
+  return schema;
+}
+
 function formatOpenAITools(tools = []) {
   if (!Array.isArray(tools) || tools.length === 0) {
     return undefined;
@@ -495,10 +512,10 @@ function formatOpenAITools(tools = []) {
       function: {
         name: tool.name,
         description: tool.description || '',
-        parameters: tool.schema || {
+        parameters: fixArrayItemsRecursive(JSON.parse(JSON.stringify(tool.schema || {
           type: 'object',
           properties: {},
-        },
+        }))),
       },
     }));
 }
@@ -635,6 +652,23 @@ export async function chatCompletionWithConfig(providerConfig, tier, messages, o
     }
   }
 
+  // ── Merge consecutive same-role messages ──────────────────────
+  // Many providers (OpenAI, Anthropic via gateway) reject consecutive user or system messages.
+  // Merge them into a single message to avoid 400 errors.
+  const mergedMessages = [];
+  for (const msg of fullMessages) {
+    const prev = mergedMessages[mergedMessages.length - 1];
+    if (prev && prev.role === msg.role && msg.role === 'user') {
+      // Merge consecutive user messages
+      prev.content = prev.content + '\n\n' + msg.content;
+    } else if (prev && prev.role === msg.role && msg.role === 'system') {
+      // Merge consecutive system messages
+      prev.content = prev.content + '\n\n' + msg.content;
+    } else {
+      mergedMessages.push({ ...msg });
+    }
+  }
+
   let body;
   let apiPath = resolved.apiPath;
   let headers = {
@@ -642,13 +676,13 @@ export async function chatCompletionWithConfig(providerConfig, tier, messages, o
   };
 
   if (resolved.format === 'anthropic') {
-    body = JSON.stringify(buildAnthropicPayload(fullMessages, resolved.model, maxTokens, temperature, systemPrompt));
+    body = JSON.stringify(buildAnthropicPayload(mergedMessages, resolved.model, maxTokens, temperature, systemPrompt));
     headers['x-api-key'] = resolved.apiKey;
     headers['anthropic-version'] = '2023-06-01';
   } else {
     const payload = {
       model: resolved.model,
-      messages: fullMessages,
+      messages: mergedMessages,
       max_tokens: maxTokens,
       temperature,
       stream: false,
@@ -710,6 +744,19 @@ export async function chatCompletionWithConfig(providerConfig, tier, messages, o
                   console.error(`[modelRouter] ⚠ Message[${i}] role=${m.role} has undefined content`);
                 }
               });
+              // Dump first tool schema to check for format issues
+              if (parsed.tools?.length > 0) {
+                console.error(`[modelRouter] First tool schema: ${JSON.stringify(parsed.tools[0]).slice(0, 500)}`);
+              }
+              // Write full payload to temp file for inspection
+              try {
+                const { writeFileSync } = require('fs');
+                writeFileSync('/tmp/modelrouter-debug-payload.json', body, 'utf8');
+              } catch {
+                // Bun/ESM — use sync write
+                Bun?.write?.('/tmp/modelrouter-debug-payload.json', body);
+              }
+              console.error('[modelRouter] Full payload written to /tmp/modelrouter-debug-payload.json');
             } catch { /* ignore parse errors in debug logging */ }
             reject(new Error(`Model API error (${res.statusCode}): ${data.slice(0, 500)}`));
             return;

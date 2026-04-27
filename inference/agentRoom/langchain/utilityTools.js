@@ -226,6 +226,7 @@ export function createUtilityTools(workspacePath, context = {}) {
         },
         values: {
           type: 'array',
+          items: { type: 'number' },
           description: 'Numeric values. For binary ops (divide, pow, log_base): [left, right]. For stats: all data points.',
         },
         percentile_rank: {
