@@ -72,5 +72,26 @@ export function buildWorkspaceHtmlPreviewDocument({ htmlContent, styles = new Ma
     documentHtml = documentHtml.replace(/<head([^>]*)>/i, '<head$1><base target="_blank">');
   }
 
+  // Fix hash-only anchor links: <base target="_blank"> causes #hash links to
+  // open in a new tab instead of scrolling within the iframe.  This small
+  // script intercepts clicks on hash-only hrefs and performs in-page navigation.
+  const hashLinkFix = `<script data-preview-hashfix>
+document.addEventListener('click', function(e) {
+  var a = e.target.closest('a[href]');
+  if (!a) return;
+  var href = a.getAttribute('href');
+  if (!href || href.charAt(0) !== '#') return;
+  e.preventDefault();
+  if (href.length > 1) {
+    var target = document.getElementById(href.slice(1)) ||
+                 document.querySelector('[name="' + CSS.escape(href.slice(1)) + '"]');
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+});
+<\/script>`;
+  documentHtml = documentHtml.replace(/<\/body>/i, hashLinkFix + '</body>');
+
   return documentHtml;
 }
