@@ -59,23 +59,31 @@ function normalizeBoundTools(tools = []) {
  */
 function toLLMMessages(langchainMessages) {
   return langchainMessages.map((msg) => {
-    if (msg._getType() === 'human') return { role: 'user', content: normalizeContent(msg.content) };
+    if (msg._getType() === 'human') return { role: 'user', content: normalizeContent(msg.content) || '.' };
     if (msg._getType() === 'ai') {
-      const formatted = { role: 'assistant', content: normalizeContent(msg.content) };
-      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      const hasToolCalls = Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0;
+      const content = normalizeContent(msg.content);
+      const formatted = {
+        role: 'assistant',
+        // Some providers reject empty string content on assistant messages with tool_calls.
+        // Use null when tool_calls are present and content is empty (OpenAI/Anthropic standard).
+        content: hasToolCalls && !content ? null : (content || ''),
+      };
+      if (hasToolCalls) {
         formatted.tool_calls = msg.tool_calls.map(toOpenAIToolCall);
       }
       return formatted;
     }
-    if (msg._getType() === 'system') return { role: 'system', content: normalizeContent(msg.content) };
+    if (msg._getType() === 'system') return { role: 'system', content: normalizeContent(msg.content) || 'You are a helpful assistant.' };
     if (msg._getType() === 'tool') {
       return {
         role: 'tool',
-        content: normalizeContent(msg.content),
+        // Tool content must never be empty — some providers reject it
+        content: normalizeContent(msg.content) || '(empty result)',
         tool_call_id: msg.tool_call_id,
       };
     }
-    return { role: 'user', content: normalizeContent(msg.content) };
+    return { role: 'user', content: normalizeContent(msg.content) || '.' };
   });
 }
 

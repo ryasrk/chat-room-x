@@ -617,6 +617,24 @@ export async function chatCompletionWithConfig(providerConfig, tier, messages, o
       : messages,
   );
 
+  // ── Sanitize messages to prevent 400 errors from providers ──
+  // Fix common issues: empty content, missing tool_call_id, consecutive same-role messages
+  for (const msg of fullMessages) {
+    // Assistant messages with tool_calls should have content: null (not empty string)
+    if (msg.role === 'assistant' && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      if (!msg.content) msg.content = null;
+    }
+    // User/system messages must have non-empty content
+    if ((msg.role === 'user' || msg.role === 'system') && !msg.content) {
+      msg.content = msg.role === 'system' ? 'You are a helpful assistant.' : '.';
+    }
+    // Tool messages must have content and tool_call_id
+    if (msg.role === 'tool') {
+      if (!msg.content) msg.content = '(empty result)';
+      if (!msg.tool_call_id) msg.tool_call_id = 'unknown_call';
+    }
+  }
+
   let body;
   let apiPath = resolved.apiPath;
   let headers = {
@@ -670,6 +688,29 @@ export async function chatCompletionWithConfig(providerConfig, tier, messages, o
       res.on('end', () => {
         try {
           if (res.statusCode >= 400) {
+            // Log the failing request for debugging
+            try {
+              const parsed = JSON.parse(body);
+              const msgCount = parsed.messages?.length || 0;
+              const toolCount = parsed.tools?.length || 0;
+              const lastMsgRole = parsed.messages?.[msgCount - 1]?.role || 'unknown';
+              const hasToolCalls = parsed.messages?.some(m => m.tool_calls?.length > 0) || false;
+              const hasToolMessages = parsed.messages?.some(m => m.role === 'tool') || false;
+              console.error(`[modelRouter] API ${res.statusCode} from ${url.href} | model=${resolved.model} msgs=${msgCount} tools=${toolCount} lastRole=${lastMsgRole} hasToolCalls=${hasToolCalls} hasToolMsgs=${hasToolMessages}`);
+              console.error(`[modelRouter] Response: ${data.slice(0, 300)}`);
+              // Log message roles sequence for debugging conversation flow issues
+              const roleSeq = parsed.messages?.map(m => m.role + (m.tool_calls ? '+tc' : '')).join(' → ') || '';
+              console.error(`[modelRouter] Message flow: ${roleSeq}`);
+              // Log any messages with null/empty content (common cause of 400 errors)
+              parsed.messages?.forEach((m, i) => {
+                if (m.content === null && !m.tool_calls?.length) {
+                  console.error(`[modelRouter] ⚠ Message[${i}] role=${m.role} has null content and no tool_calls`);
+                }
+                if (m.content === undefined && m.role !== 'tool') {
+                  console.error(`[modelRouter] ⚠ Message[${i}] role=${m.role} has undefined content`);
+                }
+              });
+            } catch { /* ignore parse errors in debug logging */ }
             reject(new Error(`Model API error (${res.statusCode}): ${data.slice(0, 500)}`));
             return;
           }
